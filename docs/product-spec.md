@@ -13,3 +13,5 @@ Mac 为菜单栏后台应用，不显示 Dock 主窗口。日常菜单只提供�
 技术方向：Android Kotlin、Compose、CameraX、MediaPipe；Windows C#/.NET、WinForms 托盘、GSMTC；Mac Swift 菜单栏、Bonjour、针对真实播放器的适配器。更早 Python 方案已替换。
 
 目标手机按用户提供为三星 S25 / Android 16 / One UI 8.5；Android 主开发机为 Mac。网页首先在用户 Chrome 的 B站、YouTube 验证，本地先验证 QuickTime；均未获得 LookPause 真链合格结论。原始资料仅本地保留，原文阈值和性能指标是研发初值。协议命名与细节参见 protocol/CONTRACT.md。
+
+网页控制当前优先验证无扩展路径：macOS 辅助功能读取前台媒体状态，必要时发送固定媒体按键；不要求 Chrome 开发者模式。只有已知真实状态与恢复资格时才允许键盘执行，不能将空格切换默认当作 PAUSE/PLAY。扩展安装方案暂缓，原型代码不代表已采用或已支持。

@@ -31,3 +31,6 @@ docs/source/
 **/.build/
 *.mp4
 *.mov
+**/.comet/handoff/
+__pycache__/
+*.pyc

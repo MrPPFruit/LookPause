@@ -133,7 +133,36 @@ func selfTest() {
     precondition(original.matches(same))
     precondition(!original.matches(otherWindow))
     precondition(!original.matches(otherMedia))
+    precondition(playbackState(label: "Pause (k)") == "PLAYING")
+    precondition(playbackState(label: "Play (k)") == "PAUSED")
+    precondition(playbackState(label: "Play keyboard shortcut k") == "PAUSED")
+    precondition(playbackState(label: "Pause keyboard shortcut k") == "PLAYING")
+    precondition(playbackState(label: "播放/暂停") == "UNKNOWN")
+    for label in ["Autoplay is on", "Save to playlist", "LookPause", "播放下一个"] {
+        precondition(playbackState(label: label) == nil)
+    }
+    precondition(resumeDenial(state: "PAUSED", owned: false, sameTarget: true, qualified: true) == "NO_PAUSE_OWNERSHIP")
+    precondition(resumeDenial(state: "PAUSED", owned: true, sameTarget: false, qualified: true) == "TARGET_CHANGED")
+    precondition(resumeDenial(state: "PAUSED", owned: true, sameTarget: true, qualified: false) == "ATTRIBUTION_UNQUALIFIED")
+    precondition(resumeDenial(state: "PAUSED", owned: true, sameTarget: true, qualified: true) == nil)
     emit(["selfTest": "PASS", "automaticResumeEnabled": false])
+}
+
+func playbackState(label: String) -> String? {
+    switch label {
+    case "Pause (k)", "Pause keyboard shortcut k", "暂停 (k)", "暫停 (k)": return "PLAYING"
+    case "Play (k)", "Play keyboard shortcut k", "播放 (k)": return "PAUSED"
+    case "播放/暂停": return "UNKNOWN"
+    default: return nil
+    }
+}
+
+func resumeDenial(state: String, owned: Bool, sameTarget: Bool, qualified: Bool) -> String? {
+    guard owned else { return "NO_PAUSE_OWNERSHIP" }
+    guard sameTarget else { return "TARGET_CHANGED" }
+    guard qualified else { return "ATTRIBUTION_UNQUALIFIED" }
+    guard state == "PAUSED" else { return "PLAYBACK_STATE_NOT_PAUSED" }
+    return nil
 }
 
 func axAttribute(_ element: AXUIElement, _ name: String) -> CFTypeRef? {
@@ -142,7 +171,7 @@ func axAttribute(_ element: AXUIElement, _ name: String) -> CFTypeRef? {
     return value
 }
 
-func inspectChromeAccessibility() {
+func inspectChromeAccessibility(checkInitialHold: Bool = false) {
     guard AXIsProcessTrusted() else {
         emit(["error": "ACCESSIBILITY_PERMISSION_REQUIRED", "automaticResumeEnabled": false])
         return
@@ -152,45 +181,69 @@ func inspectChromeAccessibility() {
         return
     }
     let app = AXUIElementCreateApplication(chrome.processIdentifier)
+    if checkInitialHold && NSWorkspace.shared.frontmostApplication?.processIdentifier != chrome.processIdentifier {
+        emit(["error": "TARGET_NOT_FRONTMOST", "playerCommands": 0])
+        return
+    }
     var windowsValue: CFTypeRef?
     let windowsStatus = AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &windowsValue)
     guard windowsStatus == .success, let windows = windowsValue as? [AXUIElement] else {
         emit(["error": "CHROME_AX_WINDOWS_UNAVAILABLE", "axStatus": windowsStatus.rawValue])
         return
     }
+    let inspectedWindows: [AXUIElement]
+    if checkInitialHold {
+        guard let focused = axAttribute(app, kAXFocusedWindowAttribute),
+              CFGetTypeID(focused) == AXUIElementGetTypeID() else {
+            emit(["error": "FOCUSED_WINDOW_UNAVAILABLE", "playerCommands": 0])
+            return
+        }
+        inspectedWindows = windows.filter { CFEqual($0, focused) }
+        guard inspectedWindows.count == 1 else {
+            emit(["error": "FOCUSED_WINDOW_UNAVAILABLE", "playerCommands": 0])
+            return
+        }
+    } else {
+        inspectedWindows = windows
+    }
     var reports: [[String: Any]] = []
-    var windowAttributeNames: [[String]] = []
-    for window in windows {
-        var attributeNames: CFArray?
-        AXUIElementCopyAttributeNames(window, &attributeNames)
-        windowAttributeNames.append(attributeNames as? [String] ?? [])
+    for window in inspectedWindows {
         let document = axAttribute(window, kAXDocumentAttribute)
         let address = (document as? String) ?? (document as? URL)?.absoluteString ?? ""
         guard let host = URL(string: address)?.host,
               ["www.bilibili.com", "www.youtube.com"].contains(host) else { continue }
-        var stack = [window]
+        var stack = [(window, false)]
         var remaining = 6000
         var controls: [[String: String]] = []
-        while let element = stack.popLast(), remaining > 0 {
+        while let (element, inheritedPageScope) = stack.popLast(), remaining > 0 {
             remaining -= 1
             let role = axAttribute(element, kAXRoleAttribute) as? String ?? ""
-            if [kAXButtonRole, kAXCheckBoxRole, kAXSliderRole].contains(role) {
-                let label = (axAttribute(element, kAXDescriptionAttribute) as? String ?? "") +
-                    " " + (axAttribute(element, kAXTitleAttribute) as? String ?? "")
-                if label.range(of: "播放|暂停|(?i:play|pause)", options: .regularExpression) != nil {
-                    var item = ["role": role, "label": label]
-                    if let number = axAttribute(element, kAXValueAttribute) as? NSNumber {
-                        item["value"] = number.stringValue
-                    }
-                    controls.append(item)
+            var pageScope = inheritedPageScope
+            if role == "AXWebArea" {
+                let rawURL = axAttribute(element, "AXURL")
+                let webAddress = (rawURL as? URL)?.absoluteString ?? (rawURL as? String ?? "")
+                pageScope = webAddress == address
+            }
+            if pageScope && role == kAXButtonRole {
+                let label = axAttribute(element, kAXDescriptionAttribute) as? String ?? ""
+                if let state = playbackState(label: label) {
+                    controls.append(["role": role, "label": label, "state": state])
                 }
             }
-            stack.append(contentsOf: axAttribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [])
+            stack.append(contentsOf: (axAttribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).map { ($0, pageScope) })
         }
-        reports.append(["host": host, "mediaControls": controls, "truncated": remaining == 0])
+        let state = remaining > 0 && controls.count == 1 ? controls[0]["state"]! : "UNKNOWN"
+        var report: [String: Any] = ["host": host, "mediaControls": controls, "state": state, "truncated": remaining == 0]
+        if checkInitialHold {
+            report["resumeDenied"] = resumeDenial(state: state, owned: false, sameTarget: true, qualified: false)
+            report["playerCommands"] = 0
+            report["result"] = state == "PAUSED" ? "HELD_UNOWNED_PAUSE" : "HELD_UNQUALIFIED"
+        }
+        reports.append(report)
     }
     emit(["scope": "read-only-accessibility-qualification", "windows": reports,
-          "windowCount": windows.count, "windowAttributeNames": windowAttributeNames,
+          "windowCount": windows.count,
+          "focusedWindowOnly": checkInitialHold,
           "automaticResumeEnabled": false])
 }
 
@@ -203,6 +256,21 @@ do {
         let front = NSWorkspace.shared.frontmostApplication
         emit(["frontmostBundle": front?.bundleIdentifier ?? "UNKNOWN", "automaticResumeEnabled": false])
     case "chrome-ax-state": inspectChromeAccessibility()
+    case "chrome-manual-hold-check": inspectChromeAccessibility(checkInitialHold: true)
+    case "manual-hold-check":
+        let before = try snapshot()
+        guard !before.playing else { throw ProbeError.resultNotObserved }
+        // START 清空所有权；首次回看必须在任何播放器操作之前被拒绝。
+        let denial = resumeDenial(state: "PAUSED", owned: false, sameTarget: true, qualified: false)
+        precondition(denial == "NO_PAUSE_OWNERSHIP")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        let after = try snapshot()
+        guard before.matches(after), !after.playing, before.currentTime == after.currentTime else {
+            throw ProbeError.resultNotObserved
+        }
+        emit(["manualHoldCheck": "PASS", "resumeDenied": denial!, "playerCommands": 0,
+              "before": try jsonSnapshot(before), "after": try jsonSnapshot(after),
+              "automaticResumeEnabled": false, "scope": "initial-manual-pause-only"])
     case "quicktime-state", "pause-test", "play-test":
         let before = try snapshot()
         let after: Snapshot

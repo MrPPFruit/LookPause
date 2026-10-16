@@ -43,3 +43,5 @@ Git：公开材料基线 main，再创建 codex/foreground-media-feasibility；�
 Git 唯一 integration branch 为 codex/experience-integration，从稳定 main 建立并导入 1455963 源码基线。阶段短分支 codex/mac-phone-experience 从 integration 创建；阶段结束先整合到 integration。main 只在 S25 整体验收成立后接收。当前未整合实现标 UNINTEGRATED。
 
 2026-10-17 阶段进展：Android 模拟器真实模型/CameraX、TLS 与重连已验证；S25 普通入口首次配对及 YouTube 观看→离开→恢复已由用户和 Mac 裁决日志交叉确认。手动接管后的暂停保持通过，手机停止识别、Mac 停止裁决及随后断开已有证据。B站/QuickTime 通用识别、同页换片/结束边界、S25 后台/息屏、菜单登录启动/退出功能审查仍为 GAP；本变更保持 active，短分支尚未集成。详见 docs/comet/reports/2026-10-17-mac-phone-experience-progress.md。
+
+2026-10-17 后续功能验证：同一通用核心已在B站与QuickTime取得真实媒体暂停/恢复及初始手动暂停保护；合格恢复后的回退已实现并以实际进度验证。默认登录登记根因已修复，普通进程从notFound登记到enabled，退出动作已观察。模拟器后台1分钟的新帧/TLS及相机生命周期通过。用户明确将长时间后台、锁屏/息屏和耗电DEFERRED，本轮不再等待30分钟。LPEXP-01菜单开关/最终截图、LPEXP-03完整同页换片边界、LPEXP-05更新后的S25整链及2.3独立审查/集成仍按实际证据保留GAP，不用技术子项替代父结果。Owner/代码与证据映射见 docs/comet/reports/2026-10-17-media-background-followup.md。

@@ -46,9 +46,15 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if UserDefaults.standard.object(forKey: "LookPause.login") == nil {
             UserDefaults.standard.set(true, forKey: "LookPause.login")
         }
-        if UserDefaults.standard.bool(forKey: "LookPause.login"), SMAppService.mainApp.status == .notRegistered {
-            do { try SMAppService.mainApp.register() } catch { startupError = "登录启动未能登记" }
+        Logger(subsystem: "com.lookpause.pilot", category: "login").notice("登记前登录状态=\(SMAppService.mainApp.status.rawValue) 意愿=\(UserDefaults.standard.bool(forKey: "LookPause.login"))")
+        if UserDefaults.standard.bool(forKey: "LookPause.login"), [.notRegistered, .notFound].contains(SMAppService.mainApp.status) {
+            do { try SMAppService.mainApp.register() } catch {
+                let error = error as NSError
+                Logger(subsystem: "com.lookpause.pilot", category: "login").error("登录登记失败 domain=\(error.domain, privacy: .public) code=\(error.code)")
+                startupError = "登录启动未能登记"
+            }
         }
+        Logger(subsystem: "com.lookpause.pilot", category: "login").notice("登记后登录状态=\(SMAppService.mainApp.status.rawValue)")
         if !AXIsProcessTrusted() {
             let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
             _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
@@ -60,8 +66,11 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func refresh() {
         connectionRow.title = receiver?.status ?? startupError ?? "接收端不可用"
         mediaRow.title = receiver?.media.status ?? "尚未开始观影"
-        permissionRow.isHidden = AXIsProcessTrusted() && startupError == nil
-        permissionRow.title = startupError ?? (AXIsProcessTrusted() ? "权限已就绪" : "需要在系统设置允许辅助功能")
+        var missingPermissions: [String] = []
+        if !AXIsProcessTrusted() { missingPermissions.append("辅助功能") }
+        if !CGPreflightListenEventAccess() { missingPermissions.append("输入监控") }
+        permissionRow.isHidden = missingPermissions.isEmpty && startupError == nil
+        permissionRow.title = startupError ?? "需要在系统设置允许" + missingPermissions.joined(separator: "、")
         loginRow.state = SMAppService.mainApp.status == .enabled ? .on :
                          (SMAppService.mainApp.status == .requiresApproval ? .mixed : .off)
         loginRow.title = SMAppService.mainApp.status == .requiresApproval ? "登录后启动（待系统批准）" : "登录后启动"

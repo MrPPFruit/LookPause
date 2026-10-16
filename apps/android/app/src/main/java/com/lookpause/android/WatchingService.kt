@@ -38,7 +38,10 @@ class WatchingService : LifecycleService() {
     private var analysis: ImageAnalysis? = null
     private val filter = DirectionFilter()
     private var lastAnalysis = 0L
-    @Volatile private var lastFrame = 0L
+    companion object {
+        @Volatile internal var lastFrame = 0L
+            private set
+    }
     private var startedAt = 0L
     private var lastObservation: Observation? = null
     private var run: String? = null
@@ -67,6 +70,7 @@ class WatchingService : LifecycleService() {
             controller.failCamera(run!!, "无法使用相机前台服务，请检查相机权限")
             stopSelf(); return
         }
+        lastFrame = 0L
         startedAt = SystemClock.elapsedRealtime()
         main.post(healthCheck)
         executor.execute {

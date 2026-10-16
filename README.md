@@ -4,7 +4,7 @@
 
 只允许恢复本工具自行暂停且仍持有恢复资格的视频，不能覆盖用户手动暂停。图像不上传、不默认留存。
 
-当前推进 S25→Mac 最小体验阶段，变更 `mac-phone-experience` 保持 active。菜单栏接收端、Android 单页与本地视觉已实现；模拟器真实 TLS、模型/相机生命周期与可信重连通过。用户已在 S25 安装并配对；补齐普通 Mac 进程的辅助功能与输入监控权限后，YouTube 已通过真实转头暂停、回看恢复，以及手动接管后保持暂停。手机停止识别与 Mac 停止裁决、随后断开均已核验；阶段尚未整体验收。旧播放器资格阶段剩余项目明确 DEFERRED，不能当成全播放器兼容证明。
+当前推进 S25→Mac 最小体验阶段，变更 `mac-phone-experience` 保持 active/UNINTEGRATED。用户已在 S25 安装、配对，YouTube真实转头暂停/回看恢复和手动接管保护已通过。通用路径新增B站与QuickTime暂停/恢复、初始手动暂停保护，以及合格恢复后回退一次的真实播放器技术证据；更新后的S25整链尚未复测。Mac登录启动已修复并核验系统登记；模拟器短时后台新帧、TLS与生命周期通过。按用户决定，长时间、锁屏/息屏与耗电测试DEFERRED。详见 docs/comet/reports/2026-10-17-media-background-followup.md，不能据此宣称全播放器兼容或整阶段交付。
 
 阅读入口：AGENTS.md → docs/product-spec.md → docs/decision-log.md → docs/development-plan.md → protocol/CONTRACT.md → docs/test-plan.md。原件及来源见 docs/source-index.md。
 

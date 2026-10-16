@@ -11,13 +11,14 @@ enum WatchingIntent: String, Codable, CaseIterable, Sendable {
 // 所有播放器副作用与暂停资格仅在此 MainActor owner 内；网络不直接调用控件。
 @MainActor
 final class MediaSession {
-    private enum Phase { case pausing, paused, resuming }
+    private enum Phase { case checking, pausing, paused, resuming, rewinding }
     private var phase: Phase?
     private var target: FrontMedia?
     private var watch: InputWatch?
     private var timer: Timer?
     private var deadline = 0.0
     private var lastTick = 0.0
+    private var rewindFrom: Double?
     private var lastIntent: WatchingIntent = .unknown
     private(set) var isWatching = false
     private(set) var status = "尚未开始观影" { didSet {
@@ -51,7 +52,8 @@ final class MediaSession {
             guard previous != .away && previous != .noFace, phase == nil else { return }
             pause()
         case .attending:
-            if phase == .paused { resume() }
+            if phase == .checking { cancel("看向屏幕，取消待定暂停") }
+            else if phase == .paused { resume() }
             else if phase == nil { status = "看向屏幕" }
         }
     }
@@ -60,6 +62,14 @@ final class MediaSession {
         mediaSessionLog.notice("暂停前权限：AX=\(AXIsProcessTrusted(), privacy: .public) 输入监听=\(CGPreflightListenEventAccess(), privacy: .public)")
         do {
             let current = try frontMedia(includeAudio: false)
+            if current.hint == .unknown, let control = current.control, current.progress != nil,
+               axAttribute(control, kAXRoleAttribute) as? String == kAXButtonRole, controlClassHint(control) == nil {
+                target = current; watch = try InputWatch(); phase = .checking
+                deadline = ProcessInfo.processInfo.systemUptime + 2
+                status = "正在核验播放进度"
+                beginTimer()
+                return
+            }
             guard current.hint == .playing else {
                 status = current.hint == .paused ? "视频已暂停，交由你控制" : "当前媒体不可识别，未操作"
                 return
@@ -67,7 +77,7 @@ final class MediaSession {
             let input = try InputWatch()
             target = current; watch = input; phase = .pausing
             deadline = ProcessInfo.processInfo.systemUptime + 2
-            try pressMedia(current, expected: .playing)
+            try pressMedia(current, expected: .playing, watch: input)
             status = "正在确认暂停"
             beginTimer()
         } catch {
@@ -83,7 +93,7 @@ final class MediaSession {
         do {
             phase = .resuming
             deadline = ProcessInfo.processInfo.systemUptime + 2
-            try pressMedia(target, expected: .paused)
+            try pressMedia(target, expected: .paused, watch: watch)
             status = "正在确认恢复"
         } catch { cancel("未能恢复，交由你控制") }
     }
@@ -104,6 +114,19 @@ final class MediaSession {
         guard watch.denied == nil else { cancel("你已接管控制，恢复取消"); return }
         guard stillFrontmost(target) else { cancel("前台已改变，恢复取消"); return }
         switch phase {
+        case .checking:
+            guard let observed = try? frontMedia(includeAudio: false), target.matches(observed) else {
+                cancel("媒体目标已改变，未操作"); return
+            }
+            if observed.hint == .playing {
+                do {
+                    self.target = observed
+                    self.phase = .pausing
+                    deadline = now + 2
+                    try pressMedia(observed, expected: .playing, watch: watch)
+                    status = "正在确认暂停"
+                } catch { cancel("无法确认播放状态，未操作") }
+            } else if observed.hint == .paused || now >= deadline { cancel("未确认正在播放，未操作") }
         case .pausing:
             if let observed = try? frontMedia(includeAudio: false), target.matches(observed), observed.hint == .paused {
                 self.target = observed
@@ -115,10 +138,26 @@ final class MediaSession {
             // 持有期间只读上下文和既有控件，避免高频扫描整棵树或枚举音频进程。
             if controlHint(target.control) != .paused { cancel("媒体状态已改变，恢复取消") }
         case .resuming:
-            if controlHint(target.control) == .playing {
-                clearOwnership()
-                status = "已恢复播放"
+            if let observed = try? frontMedia(includeAudio: false), target.matches(observed), observed.hint == .playing {
+                if lastIntent == .away || lastIntent == .noFace {
+                    clearOwnership(); pause(); return
+                }
+                rewindFrom = observed.progress
+                if (try? rewindMedia(observed, watch: watch)) == true {
+                    self.phase = .rewinding
+                    deadline = now + 2
+                    status = "已恢复播放，正在确认回退"
+                } else { cancel("已恢复播放，未能安全回退") }
             } else if now >= deadline { cancel("恢复结果不可确认，交由你控制") }
+        case .rewinding:
+            if lastIntent == .away || lastIntent == .noFace {
+                clearOwnership(); pause(); return
+            }
+            if let observed = try? frontMedia(includeAudio: false), target.matches(observed), observed.hint == .playing,
+               let from = rewindFrom, let position = observed.progress,
+               position < from - min(2, from * 0.5) {
+                cancel("已恢复播放并回退一次")
+            } else if now >= deadline { cancel("已恢复播放，回退结果未确认") }
         }
     }
 
@@ -126,6 +165,6 @@ final class MediaSession {
     private func clearOwnership() {
         timer?.invalidate(); timer = nil
         watch?.close(); watch = nil
-        target = nil; phase = nil
+        target = nil; phase = nil; rewindFrom = nil
     }
 }

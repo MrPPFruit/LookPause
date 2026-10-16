@@ -5,6 +5,8 @@ import android.app.ActivityManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Build
+import android.os.SystemClock
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -59,6 +61,43 @@ class EmulatorConnectionTest {
             waitUntil(5_000) { !controller.state.value.watching && !serviceRunning(context) }
         }
     }
+    @Test fun cameraAndTlsRemainLiveWithActivityInBackground() {
+        assumeTrue(Build.MODEL.contains("sdk") || Build.FINGERPRINT.contains("generic"))
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val args = InstrumentationRegistry.getArguments()
+        val minutes = (args.getString("backgroundMinutes") ?: "1").toInt()
+        require(minutes in 1..30)
+        val fp = requireNotNull(args.getString("fingerprint"))
+        val port = requireNotNull(args.getString("port")).toInt()
+        instrumentation.uiAutomation.grantRuntimePermission(context.packageName, Manifest.permission.CAMERA)
+        val controller = (context.applicationContext as LookPauseApplication).controller
+        ActivityScenario.launch(MainActivity::class.java).use { activity ->
+            try {
+                activity.onActivity { controller.connect(Computer("311b8a40-64d8-44ee-9ad8-e0a13522c25f", "本机资格接收端", "10.0.2.2", port, fp)) }
+                waitUntil(10_000) { controller.state.value.connected }
+                activity.onActivity { controller.start() }
+                waitUntil(25_000) { WatchingService.lastFrame > 0 }
+                activity.moveToState(Lifecycle.State.CREATED)
+                val until = SystemClock.elapsedRealtime() + minutes * 60_000L
+                var previousFrame = WatchingService.lastFrame
+                while (SystemClock.elapsedRealtime() < until) {
+                    Thread.sleep(5000)
+                    assertTrue(controller.state.value.connected)
+                    assertTrue(controller.state.value.watching)
+                    val frame = WatchingService.lastFrame
+                    assertTrue("后台模型必须继续处理新帧", frame > previousFrame)
+                    assertTrue("相机观察不能过期", SystemClock.elapsedRealtime() - frame < 3000)
+                    previousFrame = frame
+                }
+                activity.moveToState(Lifecycle.State.RESUMED)
+            } finally {
+                instrumentation.runOnMainSync { controller.stop() }
+                waitUntil(5_000) { !serviceRunning(context) }
+            }
+        }
+    }
+
     private fun waitUntil(timeout: Long, condition: () -> Boolean) {
         val deadline = System.nanoTime() + timeout * 1_000_000
         while (!condition() && System.nanoTime() < deadline) Thread.sleep(100)

@@ -4,7 +4,8 @@ root="$(cd "$(dirname "$0")/../.." && pwd)"
 bundle="$root/.local/LookPauseMediaProbe.app"
 swift build --package-path "$root/apps/macos"
 mkdir -p "$bundle/Contents/MacOS"
-cp "$root/apps/macos/.build/debug/LookPauseMediaProbe" "$bundle/Contents/MacOS/LookPauseMediaProbe"
+cp "$root/apps/macos/.build/debug/LookPauseMediaProbe" "$bundle/Contents/MacOS/.LookPauseMediaProbe.new"
+mv -f "$bundle/Contents/MacOS/.LookPauseMediaProbe.new" "$bundle/Contents/MacOS/LookPauseMediaProbe"
 cat > "$bundle/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

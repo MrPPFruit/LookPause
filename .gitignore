@@ -1,0 +1,33 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+# Build outputs
+**/build/
+**/.gradle/
+**/bin/
+**/obj/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+# Local configuration / secrets / diagnostics
+.env
+.env.*
+!.env.example
+local.properties
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.key
+logs/
+*.log
+# 本地原件、运行证据及测试媒体不公开
+.local/
+docs/source/
+.build/
+**/.build/
+*.mp4
+*.mov

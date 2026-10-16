@@ -1,6 +1,9 @@
 import AppKit
 import Network
 import Security
+import OSLog
+
+private let receiverLog = Logger(subsystem: "com.lookpause.pilot", category: "receiver")
 
 // I/O 仅负责有界帧传递；所有认证/会话/播放器决策回到 MainActor。
 final class Peer: @unchecked Sendable {
@@ -103,7 +106,9 @@ final class Receiver {
         listener.stateUpdateHandler = { [weak self] state in
             Task { @MainActor in
                 switch state {
-                case .ready: self?.status = "等待手机连接"
+                case .ready:
+                    self?.status = "等待手机连接"
+                    receiverLog.notice("接收端已就绪")
                 case .failed: self?.stop("接收端不可用")
                 default: break
                 }
@@ -169,6 +174,7 @@ final class Receiver {
             guard let intent = frame.intent, media.isWatching else {
                 peer.send(WireFrame(kind: .error, seq: seq, error: "NOT_WATCHING_OR_INVALID_INTENT")); return
             }
+            receiverLog.notice("已接收认证意图：\(intent.rawValue, privacy: .public)")
             media.receive(intent)
         case .ping: break
         default: reject(peer, "UNSUPPORTED_OPERATION"); return
@@ -220,6 +226,7 @@ final class Receiver {
         clients[peer.id]?.session = UUID().uuidString.lowercased()
         clients[peer.id]?.lastSeen = ProcessInfo.processInfo.systemUptime
         status = "已连接：" + name
+        receiverLog.notice("设备认证已通过；新会话尚未开始")
         peer.send(WireFrame(kind: .ready, token: token, session: clients[peer.id]?.session, status: "已连接，等待开始", ok: true))
     }
 

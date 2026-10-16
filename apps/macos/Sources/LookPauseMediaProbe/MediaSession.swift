@@ -1,4 +1,8 @@
 import Foundation
+import OSLog
+import ApplicationServices
+
+private let mediaSessionLog = Logger(subsystem: "com.lookpause.pilot", category: "media")
 
 enum WatchingIntent: String, Codable, CaseIterable, Sendable {
     case attending = "ATTENDING", away = "AWAY", noFace = "NO_FACE", unknown = "UNKNOWN"
@@ -16,7 +20,10 @@ final class MediaSession {
     private var lastTick = 0.0
     private var lastIntent: WatchingIntent = .unknown
     private(set) var isWatching = false
-    private(set) var status = "尚未开始观影" { didSet { onStatus?(status) } }
+    private(set) var status = "尚未开始观影" { didSet {
+        mediaSessionLog.notice("裁决：\(self.status, privacy: .public)")
+        onStatus?(status)
+    } }
     var onStatus: ((String) -> Void)?
 
     func start() {
@@ -50,6 +57,7 @@ final class MediaSession {
     }
 
     private func pause() {
+        mediaSessionLog.notice("暂停前权限：AX=\(AXIsProcessTrusted(), privacy: .public) 输入监听=\(CGPreflightListenEventAccess(), privacy: .public)")
         do {
             let current = try frontMedia(includeAudio: false)
             guard current.hint == .playing else {
@@ -62,7 +70,10 @@ final class MediaSession {
             try pressMedia(current, expected: .playing)
             status = "正在确认暂停"
             beginTimer()
-        } catch { cancel("无法确认暂停，未取得恢复资格") }
+        } catch {
+            mediaSessionLog.error("暂停失败：\(String(describing: error), privacy: .public)")
+            cancel("无法确认暂停，未取得恢复资格")
+        }
     }
 
     private func resume() {

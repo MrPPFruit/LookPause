@@ -1,6 +1,6 @@
 # 开发路线与当前状态
 
-当前唯一主目标：S25→Mac 最小体验闭环，见末尾“手机到Mac体验阶段”。完整精准判态不作为先体验的前提，但未知媒体不盲目切换。菜单栏、接收端与持续媒体核心已有开发实现，Android 普通入口及 S25 真链尚不可达；不得视为已交付。
+当前唯一主目标：S25→Mac 最小体验闭环，见末尾“手机到Mac体验阶段”。完整精准判态不作为先体验的前提，但未知媒体不盲目切换。菜单栏、接收端、Android 普通入口及本地视觉均已有开发实现；S25→Mac→YouTube 暂停/恢复与手动接管保持暂停已有真实证据。完整验收仍有 GAP，不得视为整阶段已交付。
 
 ## 第一阶段：前台媒体可行性（SUPERSEDED，剩余 DEFERRED）
 
@@ -41,3 +41,5 @@ Git：公开材料基线 main，再创建 codex/foreground-media-feasibility；�
 任务来源 openspec/changes/mac-phone-experience/tasks.md；Owner 当前开发会话。父结果→同名规格/design/tasks→apps/macos、apps/android、protocol→本轮报告，均使用 LPEXP-01～05；counterexample 见 proposal Delivery Contract。旧资格阶段只保留历史证据，不假称全通过；未知播放器仍不操作。
 
 Git 唯一 integration branch 为 codex/experience-integration，从稳定 main 建立并导入 1455963 源码基线。阶段短分支 codex/mac-phone-experience 从 integration 创建；阶段结束先整合到 integration。main 只在 S25 整体验收成立后接收。当前未整合实现标 UNINTEGRATED。
+
+2026-10-17 阶段进展：Android 模拟器真实模型/CameraX、TLS 与重连已验证；S25 普通入口首次配对及 YouTube 观看→离开→恢复已由用户和 Mac 裁决日志交叉确认。手动接管后的暂停保持通过，手机停止识别、Mac 停止裁决及随后断开已有证据。B站/QuickTime 通用识别、同页换片/结束边界、S25 后台/息屏、菜单登录启动/退出功能审查仍为 GAP；本变更保持 active，短分支尚未集成。详见 docs/comet/reports/2026-10-17-mac-phone-experience-progress.md。

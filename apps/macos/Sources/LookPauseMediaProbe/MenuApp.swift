@@ -1,6 +1,7 @@
 import AppKit
 @preconcurrency import ApplicationServices
 import ServiceManagement
+import OSLog
 
 @MainActor
 @available(macOS 15, *)
@@ -14,6 +15,7 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var startupError: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Logger(subsystem: "com.lookpause.pilot", category: "permissions").notice("普通入口权限：AX=\(AXIsProcessTrusted(), privacy: .public) 输入监听=\(CGPreflightListenEventAccess(), privacy: .public)")
         NSApp.setActivationPolicy(.accessory)
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "LookPause")

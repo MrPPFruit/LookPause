@@ -4,7 +4,7 @@ import Carbon
 import CryptoKit
 import Foundation
 
-// 仅供已授权的本机播放器资格测试；没有手机入口、网络接口或自动恢复。
+// 仅供已授权的本机播放器资格/Pilot 测试；没有手机入口或网络接口。
 enum ProbeError: Error {
     case invalidCommand
     case noFrontmostTarget
@@ -34,6 +34,7 @@ func emit(_ value: [String: Any]) {
     if let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]),
        let text = String(data: data, encoding: .utf8) {
         print(text)
+        fflush(nil)
     }
 }
 
@@ -126,6 +127,7 @@ func setRate(_ rate: Int, target: Snapshot) throws -> Snapshot {
 }
 
 func selfTest() {
+    genericSelfTest()
     let original = Snapshot(windowID: 1, mediaFingerprint: "a", playing: true, currentTime: 3, duration: 50, rate: 1)
     let same = Snapshot(windowID: 1, mediaFingerprint: "a", playing: false, currentTime: 4, duration: 50, rate: 0)
     let otherWindow = Snapshot(windowID: 2, mediaFingerprint: "a", playing: false, currentTime: 4, duration: 50, rate: 0)
@@ -252,6 +254,9 @@ do {
     guard args.count == 1 else { throw ProbeError.invalidCommand }
     switch args[0] {
     case "self-test": selfTest()
+    case "generic-state": emit(try frontMedia().report)
+    case "input-watch-test": try inputWatchTest()
+    case "pilot-cycle": try runPilotCycle()
     case "front":
         let front = NSWorkspace.shared.frontmostApplication
         emit(["frontmostBundle": front?.bundleIdentifier ?? "UNKNOWN", "automaticResumeEnabled": false])

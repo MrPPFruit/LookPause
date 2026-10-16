@@ -41,3 +41,5 @@ B站首个视频初期读到 PLAYING，随后出现付费试看及错误 87008�
 自动恢复保持关闭。菜单栏、登录启动、LAN 及手机尚未实现或验证；未用按键成功来解锁下游。
 
 暂缓原型处理：扩展、桥接及其模拟测试仅本地保留在 .local/deferred-browser-extension；当前公共 Swift package 只含原生媒体探针，避免把未采用方案并入实现。此前桥接构建/模拟结果为历史调研，不是当前网页支持能力。
+
+当前代码快照为 3beec51，位于 codex/foreground-media-feasibility，未合入 main。推送前 gh api user 连续两次返回网络 EOF，因此没有执行本阶段分支推送；远程当前仍为已确认公开的初始 main 基线。最终集成 commit：无；本阶段推送：否。

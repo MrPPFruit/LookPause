@@ -1,0 +1,54 @@
+## ADDED Requirements
+
+<!-- comet-acceptance: LPEXP-01 -->
+### Requirement: 菜单栏普通入口
+
+Mac SHALL 正常启动为菜单栏应用，被动显示状态、登录启动开关和退出，无 Dock 主窗口；默认请求登录启动，失败如实显示。
+
+#### Scenario: 普通启动
+- **WHEN** 用户打开 LookPause
+- **THEN** 菜单栏出现状态、登录启动开关和退出；无需命令行。
+
+<!-- comet-acceptance: LPEXP-02 -->
+### Requirement: 局域网可信配对
+
+手机 SHALL 发现并选择 Mac，首次连接仅由 Mac 点一次允许，双方保存凭据及固定服务端身份；未授权连接不能操作媒体。
+
+#### Scenario: 未批准设备
+- **WHEN** 新手机请求连接但 Mac 尚未允许
+- **THEN** 不接受任何观看或媒体意图。
+
+#### Scenario: 后续连接
+- **WHEN** 同一手机以保存的有效凭据连接已固定的 Mac 身份
+- **THEN** 无需重复配对确认；新会话仍须明确开始观影。
+
+<!-- comet-acceptance: LPEXP-03 -->
+### Requirement: 持续意图裁决
+
+Mac SHALL 仅处理当前认证会话的有序固定观看意图，START 不播放，停止/断线/超时/接管撤销恢复；未知媒体不盲切换。
+
+#### Scenario: 真实回看
+- **WHEN** 本轮离开已确认暂停，用户未接管且目标未变，收到回看
+- **THEN** 尝试一次恢复并观察结果，不依赖固定计时播放。
+
+#### Scenario: 旧事件
+- **WHEN** 旧会话、旧序号或断线后迟到回看事件到达
+- **THEN** 拒绝且不操作播放器。
+
+<!-- comet-acceptance: LPEXP-04 -->
+### Requirement: 手机本地观看方向
+
+Android SHALL 在用户开始并授权摄像头后本地识别，保持必要前台服务，只发送粗粒度状态与心跳，不保存或发送人脸图像/特征。
+
+#### Scenario: 摄像头失败
+- **WHEN** 权限撤销或摄像头不可用
+- **THEN** 报告未知/停止并撤销恢复，不将错误当作无脸触发暂停。
+
+<!-- comet-acceptance: LPEXP-05 -->
+### Requirement: 三星真实体验
+
+本阶段 SHALL 在 S25 实测观看、离开、回看、手动接管及停止/断线，记录真实环境与输出；无设备时保持未完成。
+
+#### Scenario: 只有构建成功
+- **WHEN** APK 构建或模拟器成功但 S25 尚未运行
+- **THEN** 不宣称三星可用或整体验收完成。

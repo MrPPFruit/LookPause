@@ -90,7 +90,7 @@ func axAddress(_ element: AXUIElement, _ attribute: String) -> String {
 }
 
 @MainActor
-func frontMedia() throws -> FrontMedia {
+func frontMedia(includeAudio: Bool = true) throws -> FrontMedia {
     guard AXIsProcessTrusted(), let front = NSWorkspace.shared.frontmostApplication,
           let bundle = front.bundleIdentifier else { throw ProbeError.noFrontmostTarget }
     let app = AXUIElementCreateApplication(front.processIdentifier)
@@ -98,7 +98,7 @@ func frontMedia() throws -> FrontMedia {
     let document = axAddress(window, kAXDocumentAttribute)
     let title = axAttribute(window, kAXTitleAttribute) as? String ?? ""
     // 浏览器标题会随播放音频、通知数变化；有文档标识时不把标题当成媒体身份。
-    let context = SHA256.hash(data: Data((document.isEmpty ? title : document).utf8)).map { String(format: "%02x", $0) }.joined()
+    let context = mediaContextHash(document.isEmpty ? title : document)
     let fileMedia = URL(string: document).map { $0.isFileURL && ["mp4", "mov", "m4v", "webm", "mkv"].contains($0.pathExtension.lowercased()) } ?? false
     var stack = [(window, true, fileMedia)]
     var budget = 6000
@@ -122,11 +122,33 @@ func frontMedia() throws -> FrontMedia {
         stack.append(contentsOf: (axAttribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).map { ($0, inScope, mediaScope) })
     }
     let unique = budget > 0 && candidates.count == 1
-    let audio = audioOutputActive(bundle: bundle)
+    let audio = includeAudio ? audioOutputActive(bundle: bundle) : nil
     return FrontMedia(pid: front.processIdentifier, bundle: bundle, window: window, context: context,
                       hint: unique ? candidates[0].1 : .unknown, control: unique ? candidates[0].0 : nil,
                       outputActive: audio, controls: candidates.count,
                       evidence: unique && candidates[0].1 != .unknown ? "AX_EXPLICIT" : "UNKNOWN")
+}
+
+func mediaContextHash(_ value: String) -> String {
+    SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()
+}
+
+@MainActor
+func stillFrontmost(_ target: FrontMedia) -> Bool {
+    guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.pid else { return false }
+    let app = AXUIElementCreateApplication(target.pid)
+    guard let window = axElement(app, kAXFocusedWindowAttribute), CFEqual(window, target.window) else { return false }
+    let document = axAddress(window, kAXDocumentAttribute)
+    let title = axAttribute(window, kAXTitleAttribute) as? String ?? ""
+    return mediaContextHash(document.isEmpty ? title : document) == target.context
+}
+
+func controlHint(_ control: AXUIElement?) -> MediaHint {
+    guard let control, (axAttribute(control, kAXEnabledAttribute) as? NSNumber)?.boolValue != false else { return .unknown }
+    let description = axAttribute(control, kAXDescriptionAttribute) as? String ?? ""
+    let label = description.isEmpty ? (axAttribute(control, kAXTitleAttribute) as? String ?? "") : description
+    let checked = (axAttribute(control, kAXRoleAttribute) as? String) == kAXCheckBoxRole ? (axAttribute(control, kAXValueAttribute) as? NSNumber)?.intValue : nil
+    return mediaHint(label: label, checkValue: checked) ?? .unknown
 }
 
 // AXPress 自身不产生键鼠事件；观察到任何真实按键/点击/滚轮均保守撤销本轮。
@@ -166,7 +188,7 @@ final class InputWatch: @unchecked Sendable {
 
 @MainActor
 func pressMedia(_ target: FrontMedia, expected: MediaHint) throws {
-    let fresh = try frontMedia()
+    let fresh = try frontMedia(includeAudio: false)
     guard target.matches(fresh) else { throw ProbeError.targetChanged }
     guard fresh.hint == expected, let control = fresh.control else { throw ProbeError.resultNotObserved }
     guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.pid else { throw ProbeError.targetChanged }

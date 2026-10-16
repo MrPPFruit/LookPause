@@ -1,7 +1,7 @@
 state_version: 3
 workflow: full
 phase: build
-delivery_outcome: pending
+delivery_outcome: superseded
 build_mode: direct
 isolation: branch
 verify_mode: null

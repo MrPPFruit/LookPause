@@ -18,5 +18,5 @@ cat > "$bundle/Contents/Info.plist" <<'PLIST'
 <key>NSAppleEventsUsageDescription</key><string>仅用于验证当前前台 QuickTime 测试视频的播放状态及明确暂停、播放。</string>
 </dict></plist>
 PLIST
-codesign --force --sign - --identifier com.lookpause.media-probe "$bundle"
+bash "$root/apps/macos/sign-bundle.sh" "$bundle" com.lookpause.media-probe
 "$bundle/Contents/MacOS/LookPauseMediaProbe" self-test

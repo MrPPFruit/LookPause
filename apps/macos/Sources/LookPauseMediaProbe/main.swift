@@ -127,6 +127,7 @@ func setRate(_ rate: Int, target: Snapshot) throws -> Snapshot {
 }
 
 func selfTest() {
+    wireSelfTest()
     genericSelfTest()
     let original = Snapshot(windowID: 1, mediaFingerprint: "a", playing: true, currentTime: 3, duration: 50, rate: 1)
     let same = Snapshot(windowID: 1, mediaFingerprint: "a", playing: false, currentTime: 4, duration: 50, rate: 0)
@@ -251,9 +252,11 @@ func inspectChromeAccessibility(checkInitialHold: Bool = false) {
 
 do {
     let args = Array(CommandLine.arguments.dropFirst())
+    if args.isEmpty { runMenuApp(); exit(0) }
     guard args.count == 1 else { throw ProbeError.invalidCommand }
     switch args[0] {
     case "self-test": selfTest()
+    case "receiver-test": try runReceiverTest()
     case "generic-state": emit(try frontMedia().report)
     case "input-watch-test": try inputWatchTest()
     case "pilot-cycle": try runPilotCycle()

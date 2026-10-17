@@ -8,11 +8,11 @@ Mac 为菜单栏后台应用，不显示 Dock 主窗口。日常菜单只提供�
 
 核心规则：开始观影不主动播放；明确 PAUSE/PLAY，不用盲目 TOGGLE；仅已验证由本工具暂停、目标未变且资格有效时恢复。用户手动播放/暂停、媒体变化、结束、断线或切换电脑均清除恢复资格。无法可靠区分手动干预则降级禁用自动恢复。
 
-视觉状态采用 ATTENDING/AWAY/NO_FACE/UNKNOWN 的原文概念；UNKNOWN 保持媒体状态，摄像头故障不等于无脸。图像仅本地内存处理，不上传、不默认留存。锁屏/息屏、只动眼不转头及多播放器兼容均待实测。
+视觉状态采用 ATTENDING/AWAY/NO_FACE/UNKNOWN 的原文概念；UNKNOWN 保持媒体状态，摄像头故障不等于无脸。图像仅本地内存处理，不上传、不默认留存。本次S25锁屏后断开，持续锁屏/息屏观影未通过；只动眼不转头及多播放器兼容仍待实测。
 
 技术方向：Android Kotlin、Compose、CameraX、MediaPipe；Windows C#/.NET、WinForms 托盘、GSMTC；Mac Swift 菜单栏、Bonjour、针对真实播放器的适配器。更早 Python 方案已替换。
 
-目标手机按用户提供为三星 S25 / Android 16 / One UI 8.5；Android 主开发机为 Mac。网页首先在用户 Chrome 的 B站、YouTube 验证，本地先验证 QuickTime；YouTube 已有 S25→Mac 普通入口暂停/恢复及接管保护真链。B站与QuickTime通用路径现有本机资格入口驱动的真实媒体证据，更新后的S25整链仍需区分。原始资料仅本地保留，原文阈值和性能指标是研发初值。协议命名与细节参见 protocol/CONTRACT.md。
+目标手机按用户提供为三星 S25 / Android 16 / One UI 8.5；Android 主开发机为 Mac。网页首先在用户 Chrome 的 B站、YouTube 验证，本地先验证 QuickTime；YouTube 已有 S25→Mac 普通入口暂停/恢复及接管保护真链。B站与QuickTime通用路径现有本机资格入口驱动的真实媒体证据，更新后的S25→Mac→YouTube普通入口已验证跳过回退仍暂停/恢复、初始手动暂停保持、STOP及重连不补播；B站/本地新版S25整链尚未复测，证据见 docs/comet/reports/2026-10-17-s25-web-retest.md。原始资料仅本地保留，原文阈值和性能指标是研发初值。协议命名与细节参见 protocol/CONTRACT.md。
 
 网页控制当前优先验证无扩展路径：macOS 辅助功能读取前台媒体状态，必要时发送固定媒体按键；不要求 Chrome 开发者模式。只有已知真实状态与恢复资格时才允许键盘执行，不能将空格切换默认当作 PAUSE/PLAY。扩展安装方案暂缓，原型代码不代表已采用或已支持。
 

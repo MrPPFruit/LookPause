@@ -47,3 +47,5 @@ Git 唯一 integration branch 为 codex/experience-integration，从稳定 main 
 2026-10-17 后续功能验证：同一通用核心已在B站与QuickTime取得真实媒体暂停/恢复及初始手动暂停保护；合格恢复后的回退已实现并以实际进度验证。默认登录登记根因已修复，普通进程从notFound登记到enabled，退出动作已观察。模拟器后台1分钟的新帧/TLS及相机生命周期通过。用户明确将长时间后台、锁屏/息屏和耗电DEFERRED，本轮不再等待30分钟。LPEXP-01菜单开关/最终截图、LPEXP-03完整同页换片边界、LPEXP-05更新后的S25整链及2.3独立审查/集成仍按实际证据保留GAP，不用技术子项替代父结果。Owner/代码与证据映射见 docs/comet/reports/2026-10-17-media-background-followup.md。
 
 2026-10-17 最新局部目标仍挂LPEXP-03：回退可选、能力不足跳过且不影响暂停/恢复；当前仅保留可核验原生秒时间线写入，取消猜测Left含义。唯一实施计划为当前change的tasks4.1～4.2，owner为MediaSession/ResumeRewind；不改Android、协议、菜单控件或增加网站适配表。原3.4网页回退是历史原型证据，已被最新决定覆盖。父结果中同页换片、完整S25验收与独立审查/整合的GAP仍保持，不扩张本轮范围。
+
+2026-10-17 S25普通入口复测完成局部tasks5.1（LPEXP-03/05）：YouTube在跳过网页回退后，真实手机离开/回看仍暂停/恢复，初始手动暂停不播放，STOP与重连不继承旧观影。Owner为当前会话，代码owner沿用MediaSession/ResumeRewind/Receiver及既有Android客户端；证据见 docs/comet/reports/2026-10-17-s25-web-retest.md。用户确认一次锁屏导致断开，锁屏持续观影未通过；手机系统版本、B站/本地新版S25整链、同页换片/结束、独立审查/最终集成仍有GAP。长时间后台/耗电继续DEFERRED，不扩大当前阶段。代码基线7b7185e，本轮仅补充证据，开发分支仍codex/mac-phone-experience，未合入integration/main，保持active/UNINTEGRATED。

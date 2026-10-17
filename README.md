@@ -4,7 +4,7 @@
 
 只允许恢复本工具自行暂停且仍持有恢复资格的视频，不能覆盖用户手动暂停。图像不上传、不默认留存。
 
-当前推进 S25→Mac 最小体验阶段，变更 `mac-phone-experience` 保持 active/UNINTEGRATED。用户已在 S25 安装、配对，YouTube真实转头暂停/回看恢复和手动接管保护已通过。通用路径新增B站与QuickTime暂停/恢复、初始手动暂停保护，以及合格恢复后回退一次的真实播放器技术证据；更新后的S25整链尚未复测。Mac登录启动已修复并核验系统登记；模拟器短时后台新帧、TLS与生命周期通过。按用户决定，长时间、锁屏/息屏与耗电测试DEFERRED。详见 docs/comet/reports/2026-10-17-media-background-followup.md，不能据此宣称全播放器兼容或整阶段交付。
+当前推进 S25→Mac 最小体验阶段，变更 `mac-phone-experience` 保持 active/UNINTEGRATED。用户已在 S25 安装、配对，YouTube真实转头暂停/回看恢复和手动接管保护已通过；B站与QuickTime通用暂停/恢复及初始手动暂停保护有技术真链证据。按用户最新决定，回退是可选补偿：只对可核验的原生秒时间线执行，网页及能力不足的播放器保留暂停/恢复并跳过回退，不猜测Left含义、不逐站适配。更新后的S25整链尚未复测。Mac登录启动登记/开关与模拟器短时后台已验证，长时间、锁屏/息屏与耗电DEFERRED。当前回退证据见 docs/comet/reports/2026-10-17-optional-rewind-progress.md；历史播放器结果见 docs/comet/reports/2026-10-17-media-background-followup.md，均不代表全播放器兼容或整阶段交付。
 
 阅读入口：AGENTS.md → docs/product-spec.md → docs/decision-log.md → docs/development-plan.md → protocol/CONTRACT.md → docs/test-plan.md。原件及来源见 docs/source-index.md。
 

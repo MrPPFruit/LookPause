@@ -17,3 +17,5 @@ canonical_spec: openspec
 - [LPEXP-03] Owner: MediaSession；Observable: 持续意图实际控制并取消旧恢复；Counterexample: 固定计时器代替视线；Evidence: 产品媒体输出及撤销。
 - [LPEXP-04] Owner: Android WatchingService；Observable: 本地推理/服务/只发粗粒度意图；Counterexample: 假数据或传图；Evidence: 相机/模型/网络与服务生命周期。
 - [LPEXP-05] Owner: 真机体验验收；Observable: S25 真实闭环；Counterexample: 模拟器冒充三星；Evidence: 型号/版本/真实步骤/播放器输出。
+
+2026-10-17 [LPEXP-03] 用户确认回退是可选补偿，不能妨碍暂停/恢复。不猜测Left含义，不逐站适配；只对可核验原生秒时间线做有界写入，能力不足即跳过。唯一调用方MediaSession在确认恢复成功后尝试一次；写入返回真实前值作为验证基准，无能力/失败不改变播放。详细条件与场景以现行change spec/design/tasks4.1～4.2为准。

@@ -271,7 +271,7 @@ final class InputWatch: @unchecked Sendable {
                                eventsOfInterest: mask, callback: { _, type, event, info in
             if let info {
                 let watch = Unmanaged<InputWatch>.fromOpaque(info).takeUnretainedValue()
-                if type == .keyDown && [49, 123].contains(event.getIntegerValueField(.keyboardEventKeycode)) &&
+                if type == .keyDown && event.getIntegerValueField(.keyboardEventKeycode) == 49 &&
                    event.getIntegerValueField(.eventSourceUserData) == watch.ownEventTag &&
                    event.getIntegerValueField(.eventSourceUnixProcessID) == Int64(getpid()) { return Unmanaged.passUnretained(event) }
                 watch.revoke(type == .tapDisabledByTimeout || type == .tapDisabledByUserInput ? "INPUT_MONITOR_LOST" : "USER_INPUT")
@@ -305,7 +305,7 @@ func pressMedia(_ target: FrontMedia, expected: MediaHint, watch: InputWatch? = 
     guard stillFrontmost(fresh), watch?.denied == nil else { throw ProbeError.targetChanged }
     let label = axAttribute(control, kAXDescriptionAttribute) as? String ?? ""
     if mediaHint(label: label) == .unknown && axAttribute(control, kAXRoleAttribute) as? String != kAXCheckBoxRole {
-        guard let watch, try sendMediaKey(.toggle, target: fresh, watch: watch, focusControl: true) else { throw ProbeError.resultNotObserved }
+        guard let watch, try sendMediaSpace(target: fresh, watch: watch) else { throw ProbeError.resultNotObserved }
     } else if AXUIElementPerformAction(control, kAXPressAction as CFString) != .success { throw ProbeError.resultNotObserved }
 }
 

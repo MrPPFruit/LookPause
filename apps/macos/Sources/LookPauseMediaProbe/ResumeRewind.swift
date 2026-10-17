@@ -4,25 +4,30 @@ import OSLog
 
 // 仅由已确认的自动恢复调用，一轮只调用一次；LAN不接收按键或回退参数。
 @MainActor
-func rewindMedia(_ target: FrontMedia, watch: InputWatch) throws -> Bool {
-    guard watch.denied == nil, stillFrontmost(target) else { return false }
+func rewindMedia(_ target: FrontMedia, watch: InputWatch) throws -> Double? {
+    guard watch.denied == nil, stillFrontmost(target) else { return nil }
     let fresh = try frontMedia(includeAudio: false)
-    guard target.matches(fresh), fresh.hint == .playing, watch.denied == nil else { return false }
-    if let seek = fresh.seekControl, nativeTimeline(seek), let seconds = numericTimelineSeconds(seek) {
-        var settable = DarwinBoolean(false)
-        guard AXUIElementIsAttributeSettable(seek, kAXValueAttribute as CFString, &settable) == .success, settable.boolValue,
-              stillFrontmost(fresh), watch.denied == nil else { return false }
-        let minimum = (axAttribute(seek, kAXMinValueAttribute) as? NSNumber)?.doubleValue ?? 0
-        return AXUIElementSetAttributeValue(seek, kAXValueAttribute as CFString, NSNumber(value: max(minimum, seconds - 5))) == .success
-    }
-    // 非秒单位时间线的AXDecrement可能成功返回但没有副作用；使用已聚焦播放控件的固定Left。
-    return try sendMediaKey(.back, target: fresh, watch: watch, focusControl: false)
+    guard target.matches(fresh), fresh.hint == .playing, watch.denied == nil,
+          let seek = fresh.seekControl, nativeTimeline(seek), let seconds = numericTimelineSeconds(seek),
+          let minimum = (axAttribute(seek, kAXMinValueAttribute) as? NSNumber)?.doubleValue,
+          let maximum = (axAttribute(seek, kAXMaxValueAttribute) as? NSNumber)?.doubleValue,
+          let destination = rewindDestination(current: seconds, minimum: minimum, maximum: maximum) else { return nil }
+    var settable = DarwinBoolean(false)
+    guard AXUIElementIsAttributeSettable(seek, kAXValueAttribute as CFString, &settable) == .success, settable.boolValue,
+          stillFrontmost(fresh), watch.denied == nil,
+          AXUIElementSetAttributeValue(seek, kAXValueAttribute as CFString, NSNumber(value: destination)) == .success else { return nil }
+    return seconds
 }
 
-enum FixedMediaKey: CGKeyCode { case toggle = 49, back = 123 }
+// 无法证明Left的含义时不发键；回退只有明确的原生时间线写入这一条执行路径。
+func rewindDestination(current: Double, minimum: Double, maximum: Double) -> Double? {
+    guard current.isFinite, minimum.isFinite, maximum.isFinite,
+          minimum >= 0, maximum > minimum, current > minimum, current <= maximum else { return nil }
+    return max(minimum, current - 5)
+}
 
 @MainActor
-func sendMediaKey(_ key: FixedMediaKey, target: FrontMedia, watch: InputWatch, focusControl: Bool) throws -> Bool {
+func sendMediaSpace(target: FrontMedia, watch: InputWatch) throws -> Bool {
     let app = AXUIElementCreateApplication(target.pid)
     let focusedElement = axElement(app, kAXFocusedUIElementAttribute)
     let editing = focusedElement.map(editableFocus) ?? true
@@ -34,7 +39,6 @@ func sendMediaKey(_ key: FixedMediaKey, target: FrontMedia, watch: InputWatch, f
         return false
     }
     if !CFEqual(focus, control) {
-        guard focusControl else { return false }
         guard AXUIElementSetAttributeValue(control, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success else { return false }
     }
     guard let focused = axElement(app, kAXFocusedUIElementAttribute), CFEqual(focused, control),
@@ -43,15 +47,25 @@ func sendMediaKey(_ key: FixedMediaKey, target: FrontMedia, watch: InputWatch, f
         return false
     }
     let source = CGEventSource(stateID: .combinedSessionState)
-    guard let down = CGEvent(keyboardEventSource: source, virtualKey: key.rawValue, keyDown: true),
-          let up = CGEvent(keyboardEventSource: source, virtualKey: key.rawValue, keyDown: false) else { return false }
+    guard let down = CGEvent(keyboardEventSource: source, virtualKey: 49, keyDown: true),
+          let up = CGEvent(keyboardEventSource: source, virtualKey: 49, keyDown: false) else { return false }
     for event in [down, up] {
-        // 方向键本身带numericPad/function语义；清空这些标记会改变Cocoa对Left的分发。
-        event.flags = key == .back ? [.maskNumericPad, .maskSecondaryFn] : []
+        event.flags = []
         event.setIntegerValueField(.eventSourceUserData, value: watch.ownEventTag)
         event.postToPid(target.pid)
     }
     return true
+}
+
+func rewindSelfTest() {
+    precondition(rewindDestination(current: 27.19, minimum: 0, maximum: 52.209) == 22.19)
+    precondition(rewindDestination(current: 3, minimum: 0, maximum: 52) == 0)
+    precondition(rewindDestination(current: 0, minimum: 0, maximum: 52) == nil)
+    precondition(rewindDestination(current: 53, minimum: 0, maximum: 52) == nil)
+    precondition(rewindDestination(current: 20, minimum: 30, maximum: 52) == nil)
+    precondition(rewindDestination(current: 20, minimum: 0, maximum: 0) == nil)
+    precondition(rewindDestination(current: .nan, minimum: 0, maximum: 52) == nil)
+    precondition(rewindDestination(current: 20, minimum: 0, maximum: .infinity) == nil)
 }
 
 func numericTimelineSeconds(_ slider: AXUIElement) -> Double? {

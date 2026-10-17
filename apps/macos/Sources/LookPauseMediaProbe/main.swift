@@ -129,6 +129,7 @@ func setRate(_ rate: Int, target: Snapshot) throws -> Snapshot {
 func selfTest() {
     wireSelfTest()
     genericSelfTest()
+    rewindSelfTest()
     let original = Snapshot(windowID: 1, mediaFingerprint: "a", playing: true, currentTime: 3, duration: 50, rate: 1)
     let same = Snapshot(windowID: 1, mediaFingerprint: "a", playing: false, currentTime: 4, duration: 50, rate: 0)
     let otherWindow = Snapshot(windowID: 2, mediaFingerprint: "a", playing: false, currentTime: 4, duration: 50, rate: 0)

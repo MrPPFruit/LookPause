@@ -65,4 +65,20 @@ extension MediaSafetyTests {
         XCTAssertNil(MediaTimeline.parse("NaN / 01:00"))
         XCTAssertNil(MediaTimeline.parse("直播"))
     }
+
+    func testOnlyThisRoundsOwnFixedKeysBypassInputRevocation() throws {
+        let event = try XCTUnwrap(CGEvent(keyboardEventSource: nil, virtualKey: 123, keyDown: true))
+        event.setIntegerValueField(.eventSourceUnixProcessID, value: Int64(getpid()))
+        event.setIntegerValueField(.eventSourceUserData, value: 12345)
+        XCTAssertTrue(isOwnMediaKey(event, type: .keyDown, tag: 12345))
+        event.setIntegerValueField(.keyboardEventKeycode, value: 49)
+        XCTAssertTrue(isOwnMediaKey(event, type: .keyDown, tag: 12345))
+        XCTAssertFalse(isOwnMediaKey(event, type: .keyDown, tag: 67890), "真实或其他轮次输入仍撤销")
+        XCTAssertFalse(isOwnMediaKey(event, type: .flagsChanged, tag: 12345))
+        event.setIntegerValueField(.eventSourceUnixProcessID, value: Int64(getpid()) + 1)
+        XCTAssertFalse(isOwnMediaKey(event, type: .keyDown, tag: 12345))
+        event.setIntegerValueField(.eventSourceUnixProcessID, value: Int64(getpid()))
+        event.setIntegerValueField(.keyboardEventKeycode, value: 124)
+        XCTAssertFalse(isOwnMediaKey(event, type: .keyDown, tag: 12345), "不能扩大为任意按键豁免")
+    }
 }

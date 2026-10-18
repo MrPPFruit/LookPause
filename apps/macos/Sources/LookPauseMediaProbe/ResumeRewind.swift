@@ -3,23 +3,32 @@ import ApplicationServices
 import OSLog
 
 // 仅由已确认的自动恢复调用，一轮只调用一次；LAN不接收按键或回退参数。
-@MainActor
-func rewindMedia(_ target: FrontMedia, watch: InputWatch) throws -> Double? {
-    guard watch.denied == nil, stillFrontmost(target) else { return nil }
-    let fresh = try frontMedia(includeAudio: false)
-    guard target.matches(fresh), fresh.hint == .playing, watch.denied == nil,
-          let seek = fresh.seekControl, nativeTimeline(seek), let seconds = numericTimelineSeconds(seek),
-          let minimum = (axAttribute(seek, kAXMinValueAttribute) as? NSNumber)?.doubleValue,
-          let maximum = (axAttribute(seek, kAXMaxValueAttribute) as? NSNumber)?.doubleValue,
-          let destination = rewindDestination(current: seconds, minimum: minimum, maximum: maximum) else { return nil }
-    var settable = DarwinBoolean(false)
-    guard AXUIElementIsAttributeSettable(seek, kAXValueAttribute as CFString, &settable) == .success, settable.boolValue,
-          stillFrontmost(fresh), watch.denied == nil,
-          AXUIElementSetAttributeValue(seek, kAXValueAttribute as CFString, NSNumber(value: destination)) == .success else { return nil }
-    return seconds
+struct RewindAttempt {
+    let from: Double?
 }
 
-// 无法证明Left的含义时不发键；回退只有明确的原生时间线写入这一条执行路径。
+@MainActor
+func rewindMedia(_ target: FrontMedia, watch: InputWatch) throws -> RewindAttempt? {
+    guard watch.denied == nil, stillFrontmost(target) else { return nil }
+    let fresh = try frontMedia(includeAudio: false)
+    guard target.matches(fresh), fresh.hint == .playing, watch.denied == nil else { return nil }
+    if let seek = fresh.seekControl, nativeTimeline(seek), let seconds = numericTimelineSeconds(seek),
+       let minimum = (axAttribute(seek, kAXMinValueAttribute) as? NSNumber)?.doubleValue,
+       let maximum = (axAttribute(seek, kAXMaxValueAttribute) as? NSNumber)?.doubleValue {
+        guard let destination = rewindDestination(current: seconds, minimum: minimum, maximum: maximum) else { return nil }
+        var settable = DarwinBoolean(false)
+        if AXUIElementIsAttributeSettable(seek, kAXValueAttribute as CFString, &settable) == .success, settable.boolValue {
+            // 已提交过原生写入就不再补Left，避免错误返回下重复回退。
+            guard stillFrontmost(fresh), watch.denied == nil,
+                  AXUIElementSetAttributeValue(seek, kAXValueAttribute as CFString, NSNumber(value: destination)) == .success else { return nil }
+            return RewindAttempt(from: seconds)
+        }
+    }
+    // shortcut: Left语义由播放器决定；仅在恢复后尝试一次，结果不明时不补发。
+    guard try sendMediaKey(.left, target: fresh, watch: watch) else { return nil }
+    return RewindAttempt(from: fresh.progress)
+}
+
 func rewindDestination(current: Double, minimum: Double, maximum: Double) -> Double? {
     guard current.isFinite, minimum.isFinite, maximum.isFinite,
           minimum >= 0, maximum > minimum, current > minimum, current <= maximum else { return nil }
@@ -27,7 +36,8 @@ func rewindDestination(current: Double, minimum: Double, maximum: Double) -> Dou
 }
 
 @MainActor
-func sendMediaSpace(target: FrontMedia, watch: InputWatch) throws -> Bool {
+func sendMediaKey(_ key: MediaKey, target: FrontMedia, watch: InputWatch) throws -> Bool {
+    guard key != .left || target.hint == .playing else { return false }
     let app = AXUIElementCreateApplication(target.pid)
     let focusedElement = axElement(app, kAXFocusedUIElementAttribute)
     let editing = focusedElement.map(editableFocus) ?? true
@@ -47,13 +57,14 @@ func sendMediaSpace(target: FrontMedia, watch: InputWatch) throws -> Bool {
         return false
     }
     let source = CGEventSource(stateID: .combinedSessionState)
-    guard let down = CGEvent(keyboardEventSource: source, virtualKey: 49, keyDown: true),
-          let up = CGEvent(keyboardEventSource: source, virtualKey: 49, keyDown: false) else { return false }
+    guard let down = CGEvent(keyboardEventSource: source, virtualKey: key.rawValue, keyDown: true),
+          let up = CGEvent(keyboardEventSource: source, virtualKey: key.rawValue, keyDown: false) else { return false }
     for event in [down, up] {
         event.flags = []
         event.setIntegerValueField(.eventSourceUserData, value: watch.ownEventTag)
         event.postToPid(target.pid)
     }
+    Logger(subsystem: "com.lookpause.pilot", category: "media").notice("固定媒体键已提交 key=\(key.rawValue, privacy: .public)")
     return true
 }
 

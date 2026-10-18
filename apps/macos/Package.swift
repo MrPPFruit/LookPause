@@ -3,7 +3,8 @@ import PackageDescription
 
 let package = Package(
     name: "LookPauseMediaProbe",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v15)],
     products: [.executable(name: "LookPauseMediaProbe", targets: ["LookPauseMediaProbe"])],
-    targets: [.executableTarget(name: "LookPauseMediaProbe")]
+    targets: [.executableTarget(name: "LookPauseMediaProbe"),
+              .testTarget(name: "MediaSafetyTests", dependencies: ["LookPauseMediaProbe"])]
 )

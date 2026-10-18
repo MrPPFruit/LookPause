@@ -2,7 +2,7 @@
 
 先读 README.md、docs/product-spec.md、docs/decision-log.md、docs/development-plan.md、protocol/CONTRACT.md、docs/test-plan.md；需要完整背景时读 docs/source-index.md 指向的原件。
 
-现行决策优先于定名前原件；原件只读保留，不直接改名或修订内容。正式名称 LookPause，原文 GazePause 与发现标识需后续统一决策；协议尚未冻结。
+现行决策优先于定名前原件；原件只读保留，不直接改名或修订内容。正式显示名称 PausePal（2026-10-18 用户确认，原 LookPause）；保留现有工程目录、com.lookpause 安装/配对身份与 _lookpause._tcp. 服务标识，原文 GazePause 只作历史；协议尚未冻结。
 
 Windows 在 Windows 开发及真实测试，Mac 在 Mac 开发及真实测试。Android 主开发机待用户确认，避免两台主机同时改同一工程。平台任务默认只改负责目录；共享协议变更先更新契约、样例与兼容测试，并记录跨端影响。
 

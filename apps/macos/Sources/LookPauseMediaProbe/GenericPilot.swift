@@ -3,6 +3,7 @@ import ApplicationServices
 import CoreAudio
 import CryptoKit
 import Foundation
+import OSLog
 
 // 本机固定意图 Pilot；无应用/站点白名单，无网络或任意输入接口。
 enum MediaHint: String { case playing = "PLAYING", paused = "PAUSED", unknown = "UNKNOWN" }
@@ -16,7 +17,9 @@ func mediaHint(label: String, checkValue: Int? = nil) -> MediaHint? {
         if let checkValue { return checkValue == 1 ? .playing : checkValue == 0 ? .paused : .unknown }
         return .paused
     case "pause", "暂停", "暫停": return .playing
-    case "play/pause", "播放/暂停", "播放／暂停": return .unknown
+    case "play/pause", "播放/暂停", "播放／暂停":
+        if let checkValue { return checkValue == 1 ? .playing : checkValue == 0 ? .paused : .unknown }
+        return .unknown
     default: return nil
     }
 }
@@ -27,19 +30,48 @@ struct FrontMedia {
     let bundle: String
     let window: AXUIElement
     let context: String
-    let hint: MediaHint
+    var hint: MediaHint
     let control: AXUIElement?
     let outputActive: Bool?
     let controls: Int
     let evidence: String
+    var seekControl: AXUIElement? = nil
+    var progress: Double? = nil
+    var timeline: MediaTimeline? = nil
+    var timelineControl: AXUIElement? = nil
 
+    // shortcut: AX相同观察值不是播放项版本；取得稳定播放项ID后再扩大换片保证。
     func matches(_ other: FrontMedia) -> Bool {
-        pid == other.pid && context == other.context && CFEqual(window, other.window)
+        guard pid == other.pid && context == other.context && CFEqual(window, other.window) else { return false }
+        for (left, right) in [(control, other.control), (seekControl, other.seekControl)] {
+            switch (left, right) {
+            case let (a?, b?): if !CFEqual(a, b) { return false }
+            case (nil, nil): break
+            default: return false
+            }
+        }
+        switch (timeline, other.timeline) {
+        case let (a?, b?): return a.sameDuration(b)
+        case (nil, nil): return true
+        default: return false
+        }
+    }
+
+    func canResume(_ fresh: FrontMedia) -> Bool {
+        guard matches(fresh), hint == .paused, fresh.hint == .paused,
+              let timeline, let latest = fresh.timeline else { return false }
+        return timeline.holdsPause(latest)
+    }
+
+    var pauseStillHeld: Bool {
+        guard controlHint(control) == .paused, let timeline, let source = timelineControl,
+              let current = readTimeline(source) else { return false }
+        return timeline.holdsPause(current)
     }
 
     var report: [String: Any] {
         ["frontmostBundle": bundle, "contextHash": context, "hint": hint.rawValue,
-         "controls": controls, "audioOutputActive": outputActive.map { $0 as Any } ?? NSNull(),
+         "controls": controls, "timelineAvailable": timeline != nil, "durationSeconds": timeline.map { $0.duration as Any } ?? NSNull(), "progressSeconds": progress.map { $0 as Any } ?? NSNull(), "audioOutputActive": outputActive.map { $0 as Any } ?? NSNull(),
          "evidence": evidence, "scope": "local-pilot-only", "experimental": true]
     }
 }
@@ -90,19 +122,21 @@ func axAddress(_ element: AXUIElement, _ attribute: String) -> String {
 }
 
 @MainActor
-func frontMedia() throws -> FrontMedia {
+func frontMedia(includeAudio: Bool = true) throws -> FrontMedia {
     guard AXIsProcessTrusted(), let front = NSWorkspace.shared.frontmostApplication,
           let bundle = front.bundleIdentifier else { throw ProbeError.noFrontmostTarget }
     let app = AXUIElementCreateApplication(front.processIdentifier)
     guard let window = axElement(app, kAXFocusedWindowAttribute) else { throw ProbeError.noFrontmostTarget }
     let document = axAddress(window, kAXDocumentAttribute)
     let title = axAttribute(window, kAXTitleAttribute) as? String ?? ""
-    // 浏览器标题会随播放音频、通知数变化；有文档标识时不把标题当成媒体身份。
-    let context = SHA256.hash(data: Data((document.isEmpty ? title : document).utf8)).map { String(format: "%02x", $0) }.joined()
+    // 浏览器标题会随播放音频、通知数变化；归一化这些装饰后与文档标识共同关联目标。
+    let context = foregroundContext(document: document, title: title)
     let fileMedia = URL(string: document).map { $0.isFileURL && ["mp4", "mov", "m4v", "webm", "mkv"].contains($0.pathExtension.lowercased()) } ?? false
     var stack = [(window, true, fileMedia)]
     var budget = 6000
     var candidates: [(AXUIElement, MediaHint)] = []
+    var positions: [(AXUIElement, MediaTimeline)] = []
+    var seekControls: [AXUIElement] = []
     while let (element, inheritedScope, inheritedMedia) = stack.popLast(), budget > 0 {
         budget -= 1
         let role = axAttribute(element, kAXRoleAttribute) as? String ?? ""
@@ -112,27 +146,149 @@ func frontMedia() throws -> FrontMedia {
         if role == "AXWebArea", !document.isEmpty {
             inScope = axAddress(element, "AXURL") == document
         }
+        if inScope && mediaScope && role == kAXSliderRole,
+           semantics.range(of: #"\bseek\b|进度|播放位置|时间线"#, options: .regularExpression) != nil { seekControls.append(element) }
+        if inScope && mediaScope && role == kAXGroupRole {
+            let children = axAttribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? []
+            if (2...8).contains(children.count), children.allSatisfy({ axAttribute($0, kAXRoleAttribute) as? String == kAXStaticTextRole }),
+               let timeline = MediaTimeline.parse(children.compactMap { axAttribute($0, kAXValueAttribute) as? String }.joined()) { positions.append((element, timeline)) }
+        }
+        if inScope && mediaScope && role == kAXStaticTextRole,
+           let value = axAttribute(element, kAXValueAttribute) as? String, let timeline = MediaTimeline.parse(value) {
+            positions.append((element, timeline))
+        }
         if inScope && mediaScope && [kAXButtonRole, kAXCheckBoxRole].contains(role),
            (axAttribute(element, kAXEnabledAttribute) as? NSNumber)?.boolValue != false {
             let description = axAttribute(element, kAXDescriptionAttribute) as? String ?? ""
             let label = description.isEmpty ? (axAttribute(element, kAXTitleAttribute) as? String ?? "") : description
             let checked = role == kAXCheckBoxRole ? (axAttribute(element, kAXValueAttribute) as? NSNumber)?.intValue : nil
-            if let hint = mediaHint(label: label, checkValue: checked) { candidates.append((element, hint)) }
+            if mediaHint(label: label, checkValue: checked) != nil {
+                candidates.append((element, controlHint(element)))
+            }
         }
         stack.append(contentsOf: (axAttribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).map { ($0, inScope, mediaScope) })
     }
     let unique = budget > 0 && candidates.count == 1
-    let audio = audioOutputActive(bundle: bundle)
-    return FrontMedia(pid: front.processIdentifier, bundle: bundle, window: window, context: context,
-                      hint: unique ? candidates[0].1 : .unknown, control: unique ? candidates[0].0 : nil,
-                      outputActive: audio, controls: candidates.count,
-                      evidence: unique && candidates[0].1 != .unknown ? "AX_EXPLICIT" : "UNKNOWN")
+    let source = positions.count == 1 ? positions[0].0 : (seekControls.count == 1 ? seekControls[0] : nil)
+    let timeline = source.flatMap(readTimeline)
+    let audio = includeAudio ? audioOutputActive(bundle: bundle) : nil
+    var media = FrontMedia(pid: front.processIdentifier, bundle: bundle, window: window, context: context,
+                           hint: unique ? candidates[0].1 : .unknown, control: unique ? candidates[0].0 : nil,
+                           outputActive: audio, controls: candidates.count,
+                           evidence: unique ? "AX_MEDIA_STATE" : "UNKNOWN",
+                           seekControl: seekControls.count == 1 ? seekControls[0] : nil,
+                           progress: timeline?.beforeEnd == true ? timeline?.position : nil,
+                           timeline: timeline, timelineControl: source)
+    let canInferProgress = unique && axAttribute(candidates[0].0, kAXRoleAttribute) as? String == kAXButtonRole && controlClassHint(candidates[0].0) == nil
+    let now = ProcessInfo.processInfo.systemUptime
+    var playingAt: Double?
+    if canInferProgress && media.hint == .unknown, let progress = media.progress, let previous = lastProgressSample,
+       previous.media.matches(media), let previousPosition = previous.media.progress, now - previous.time <= 2,
+       progress > previousPosition, progress - previousPosition <= 8 { media.hint = .playing; playingAt = now }
+    if canInferProgress && media.hint == .unknown, let previous = lastProgressSample,
+       previous.media.matches(media), media.progress != nil, media.progress == previous.media.progress,
+       let confirmedAt = previous.playingAt, now - confirmedAt < 0.3 {
+        media.hint = .playing; playingAt = confirmedAt
+    }
+    if let timeline, !timeline.beforeEnd { media.hint = .unknown }
+    lastProgressSample = (media, now, playingAt)
+    return media
+}
+
+func mediaContextHash(_ value: String) -> String {
+    SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()
+}
+
+@MainActor
+func stillFrontmost(_ target: FrontMedia) -> Bool {
+    guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.pid else { return false }
+    let app = AXUIElementCreateApplication(target.pid)
+    guard let window = axElement(app, kAXFocusedWindowAttribute), CFEqual(window, target.window) else { return false }
+    let document = axAddress(window, kAXDocumentAttribute)
+    let title = axAttribute(window, kAXTitleAttribute) as? String ?? ""
+    return foregroundContext(document: document, title: title) == target.context
+}
+
+func controlHint(_ control: AXUIElement?) -> MediaHint {
+    guard let control, (axAttribute(control, kAXEnabledAttribute) as? NSNumber)?.boolValue != false else { return .unknown }
+    let description = axAttribute(control, kAXDescriptionAttribute) as? String ?? ""
+    let label = description.isEmpty ? (axAttribute(control, kAXTitleAttribute) as? String ?? "") : description
+    let checked = (axAttribute(control, kAXRoleAttribute) as? String) == kAXCheckBoxRole ? (axAttribute(control, kAXValueAttribute) as? NSNumber)?.intValue : nil
+    return resolvedMediaHint(label: label, checkValue: checked, classes: controlClasses(control))
+}
+
+func resolvedMediaHint(label: String, checkValue: Int?, classes: [String]) -> MediaHint {
+    let explicit = mediaHint(label: label, checkValue: checkValue) ?? .unknown
+    let inherited = mediaClassHint(classes)
+    if inherited == .unknown { return .unknown }
+    if explicit != .unknown, let inherited, inherited != explicit { return .unknown }
+    return explicit != .unknown ? explicit : (inherited ?? .unknown)
+}
+
+func controlClassHint(_ control: AXUIElement) -> MediaHint? { mediaClassHint(controlClasses(control)) }
+
+private func controlClasses(_ control: AXUIElement) -> [String] {
+    var node: AXUIElement? = control
+    var classes: [String] = []
+    for _ in 0..<8 {
+        guard let current = node else { break }
+        let role = axAttribute(current, kAXRoleAttribute) as? String ?? ""
+        if role == kAXWindowRole || role == "AXWebArea" { break }
+        classes += axAttribute(current, "AXDOMClassList") as? [String] ?? []
+        node = axElement(current, kAXParentAttribute)
+    }
+    return classes
+}
+
+@MainActor private var lastProgressSample: (media: FrontMedia, time: Double, playingAt: Double?)?
+
+func readTimeline(_ element: AXUIElement) -> MediaTimeline? {
+    let role = axAttribute(element, kAXRoleAttribute) as? String ?? ""
+    if role == kAXSliderRole {
+        for attribute in [kAXValueAttribute, kAXValueDescriptionAttribute] {
+            if let value = axAttribute(element, attribute) as? String, let timeline = MediaTimeline.parse(value) { return timeline }
+        }
+        // 网页百分比数值不当作秒；只接受明确秒单位的原生范围。
+        if nativeTimeline(element), let current = numericTimelineSeconds(element),
+           let end = (axAttribute(element, kAXMaxValueAttribute) as? NSNumber)?.doubleValue, end.isFinite, end > 0 {
+            return MediaTimeline(position: current, duration: end, rounded: false)
+        }
+        return nil
+    }
+    if role == kAXGroupRole {
+        let children = axAttribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? []
+        guard (2...8).contains(children.count), children.allSatisfy({ axAttribute($0, kAXRoleAttribute) as? String == kAXStaticTextRole }) else { return nil }
+        return MediaTimeline.parse(children.compactMap { axAttribute($0, kAXValueAttribute) as? String }.joined())
+    }
+    return (axAttribute(element, kAXValueAttribute) as? String).flatMap(MediaTimeline.parse)
+}
+
+func foregroundContext(document: String, title: String) -> String {
+    let stableTitle = title.replacingOccurrences(of: #"^\(\d+\)\s*"#, with: "", options: .regularExpression)
+    let mediaTitle = stableTitle.replacingOccurrences(of: #" - (?:正在播放音频|播放音频|Playing audio|Audio playing)"#, with: "", options: .regularExpression)
+    return mediaContextHash(document + "\n" + mediaTitle)
+}
+
+func mediaProgress(_ value: String) -> Double? {
+    guard let timeline = MediaTimeline.parse(value), timeline.beforeEnd else { return nil }
+    return timeline.position
+}
+
+func mediaClassHint(_ classes: [String]) -> MediaHint? {
+    func has(_ state: String) -> Bool {
+        classes.contains { $0.range(of: "(^|[-_])state[-_]" + state + "$|^" + state + "$|--" + state + "$", options: .regularExpression) != nil }
+    }
+    if has("ended") || has("loading") || (has("paused") && has("playing")) { return .unknown }
+    if has("paused") { return .paused }
+    if has("playing") { return .playing }
+    return nil
 }
 
 // AXPress 自身不产生键鼠事件；观察到任何真实按键/点击/滚轮均保守撤销本轮。
 final class InputWatch: @unchecked Sendable {
     private let lock = NSLock()
     private var reason: String?
+    let ownEventTag = Int64.random(in: 1...Int64.max)
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
     var denied: String? { lock.withLock { reason } }
@@ -145,6 +301,9 @@ final class InputWatch: @unchecked Sendable {
                                eventsOfInterest: mask, callback: { _, type, event, info in
             if let info {
                 let watch = Unmanaged<InputWatch>.fromOpaque(info).takeUnretainedValue()
+                if type == .keyDown && event.getIntegerValueField(.keyboardEventKeycode) == 49 &&
+                   event.getIntegerValueField(.eventSourceUserData) == watch.ownEventTag &&
+                   event.getIntegerValueField(.eventSourceUnixProcessID) == Int64(getpid()) { return Unmanaged.passUnretained(event) }
                 watch.revoke(type == .tapDisabledByTimeout || type == .tapDisabledByUserInput ? "INPUT_MONITOR_LOST" : "USER_INPUT")
             }
             return Unmanaged.passUnretained(event)
@@ -165,12 +324,20 @@ final class InputWatch: @unchecked Sendable {
 }
 
 @MainActor
-func pressMedia(_ target: FrontMedia, expected: MediaHint) throws {
-    let fresh = try frontMedia()
+func pressMedia(_ target: FrontMedia, expected: MediaHint, watch: InputWatch? = nil) throws {
+    let fresh = try frontMedia(includeAudio: false)
     guard target.matches(fresh) else { throw ProbeError.targetChanged }
-    guard fresh.hint == expected, let control = fresh.control else { throw ProbeError.resultNotObserved }
-    guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.pid else { throw ProbeError.targetChanged }
-    guard AXUIElementPerformAction(control, kAXPressAction as CFString) == .success else { throw ProbeError.resultNotObserved }
+    guard fresh.hint == expected else {
+        Logger(subsystem: "com.lookpause.pilot", category: "media").notice("执行前判态不一致 expected=\(expected.rawValue, privacy: .public) actual=\(fresh.hint.rawValue, privacy: .public)")
+        throw ProbeError.resultNotObserved
+    }
+    guard expected != .paused || target.canResume(fresh) else { throw ProbeError.targetChanged }
+    guard let control = fresh.control else { throw ProbeError.resultNotObserved }
+    guard stillFrontmost(fresh), watch?.denied == nil else { throw ProbeError.targetChanged }
+    let label = axAttribute(control, kAXDescriptionAttribute) as? String ?? ""
+    if mediaHint(label: label) == .unknown && axAttribute(control, kAXRoleAttribute) as? String != kAXCheckBoxRole {
+        guard let watch, try sendMediaSpace(target: fresh, watch: watch) else { throw ProbeError.resultNotObserved }
+    } else if AXUIElementPerformAction(control, kAXPressAction as CFString) != .success { throw ProbeError.resultNotObserved }
 }
 
 @MainActor
@@ -198,7 +365,7 @@ func runPilotCycle() throws {
     }
     let watch = try InputWatch()
     defer { watch.close() }
-    try pressMedia(initial, expected: .playing)
+    try pressMedia(initial, expected: .playing, watch: watch)
     let paused = try observeHint(.paused, target: initial, watch: watch)
     emit(["pilot": "PAUSE_OBSERVED", "playerCommands": 1, "returnAfterSeconds": 20])
     // shortcut: 上下文摘要不能证明应用内部的全部媒体换片；当前仅作为可见 Pilot，不授予正式产品资格。
@@ -218,7 +385,7 @@ func runPilotCycle() throws {
     }
     // 最后一次读状态与调用之间仍有平台竞态，实测范围不能推广为绝对保证。
     if let denial = watch.denied { emit(["pilot": "RESUME_CANCELLED", "reason": denial]); return }
-    try pressMedia(paused, expected: .paused)
+    try pressMedia(paused, expected: .paused, watch: watch)
     _ = try observeHint(.playing, target: paused, watch: watch)
     emit(["pilot": "RESUME_OBSERVED", "playerCommands": 2, "ordinaryProductAvailable": false])
 }
@@ -229,6 +396,18 @@ func genericSelfTest() {
     precondition(mediaHint(label: "播放", checkValue: 0) == .paused)
     precondition(mediaHint(label: "播放", checkValue: 1) == .playing)
     precondition(mediaHint(label: "播放/暂停") == .unknown)
+    precondition(mediaHint(label: "播放/暂停", checkValue: 1) == .playing)
+    precondition(mediaHint(label: "播放/暂停", checkValue: 0) == .paused)
+    precondition(mediaHint(label: "播放/暂停", checkValue: 2) == .unknown)
+    precondition(mediaClassHint(["player-state-paused"]) == .paused)
+    precondition(mediaClassHint(["player-state-paused", "player-state-ended"]) == .unknown)
+    precondition(mediaClassHint(["ctrl-play"]) == nil)
+    precondition(mediaProgress("00:23 / 14:50") == 23)
+    precondition(mediaProgress("14:50 / 14:50") == nil)
+    precondition(mediaProgress("not a timeline") == nil)
+    precondition(foregroundContext(document: "a", title: "Film - 正在播放音频 - Browser") == foregroundContext(document: "a", title: "Film - Browser"))
+    precondition(foregroundContext(document: "a", title: "(3) Film") == foregroundContext(document: "a", title: "(4) Film"))
+    precondition(foregroundContext(document: "a", title: "Film") != foregroundContext(document: "a", title: "Other"))
     for label in ["Autoplay is on", "Save to playlist", "LookPause", "播放下一个"] {
         precondition(mediaHint(label: label) == nil)
     }

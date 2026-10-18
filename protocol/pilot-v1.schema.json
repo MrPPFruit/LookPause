@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lookpause.local/pilot-v1.schema.json",
+  "title": "LookPause 体验协议 v1",
+  "type": "object",
+  "required": [
+    "v",
+    "kind"
+  ],
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "kind": {
+      "enum": [
+        "hello",
+        "ready",
+        "start",
+        "stop",
+        "intent",
+        "ping",
+        "ack",
+        "status",
+        "error"
+      ]
+    },
+    "deviceId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "token": {
+      "type": "string",
+      "contentEncoding": "base64"
+    },
+    "session": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9223372036854775807
+    },
+    "intent": {
+      "enum": [
+        "ATTENDING",
+        "AWAY",
+        "NO_FACE",
+        "UNKNOWN"
+      ]
+    },
+    "status": {
+      "type": "string"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "error": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}

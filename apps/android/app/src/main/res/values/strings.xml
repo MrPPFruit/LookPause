@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PausePal</string>
+    <string name="discovering_computers">正在寻找同一局域网中的 %1$s 电脑…</string>
+    <string name="watching_notification">%1$s 正在识别观看方向</string>
+</resources>

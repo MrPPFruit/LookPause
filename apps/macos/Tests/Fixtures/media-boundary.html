@@ -1,0 +1,18 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>PausePal 媒体边界验证</title>
+<style>body{font:18px system-ui;margin:32px;background:#f4f4f4}video{width:640px;display:block}button{padding:12px;margin:8px}section{background:white;padding:16px;max-width:680px}</style>
+<h1>同页媒体边界验证</h1><p>仅测试页：标题与地址固定；时间和状态来自真实本地视频。</p>
+<section id="player" role="group" aria-label="视频播放器"><video id="film" src="/a.mp4" muted></video><button id="play" aria-label="Play">播放</button><span id="time"></span></section>
+<button id="reset">准备原样片并播放</button><button id="replace">替换播放控件</button><button id="source">同页切换短样片</button><button id="end">移到播放结束</button>
+<script>
+const film=document.querySelector('#film'),player=document.querySelector('#player'),time=document.querySelector('#time');
+let play=document.querySelector('#play');
+const stamp=s=>`${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+function update(){const ended=film.ended||(Number.isFinite(film.duration)&&film.currentTime>=film.duration);player.className=ended?'player-state-ended':film.paused?'player-state-paused':'player-state-playing';play.setAttribute('aria-label',film.paused?'Play':'Pause');play.textContent=film.paused?'播放':'暂停';time.textContent=Number.isFinite(film.duration)?`${stamp(film.currentTime)} / ${stamp(film.duration)}`:'';}
+function bind(){play.onclick=()=>film.paused?film.play():film.pause();}
+function load(path,start,run){film.onloadedmetadata=()=>{film.currentTime=start;update();if(run)film.play();};film.src=path;film.load();}
+bind();['timeupdate','play','pause','ended','seeked','loadedmetadata'].forEach(e=>film.addEventListener(e,update));
+document.querySelector('#reset').onclick=()=>load('/a.mp4',5,true);
+document.querySelector('#replace').onclick=()=>{const replacement=play.cloneNode(true);play.replaceWith(replacement);play=replacement;bind();update();};
+document.querySelector('#source').onclick=()=>load('/b.mp4',3,false);
+document.querySelector('#end').onclick=()=>{film.currentTime=film.duration;update();};
+</script></html>

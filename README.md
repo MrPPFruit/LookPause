@@ -2,6 +2,8 @@
 
 原名 LookPause；2026-10-18 用户确认仅更改显示名称。安装/配对身份、服务标识和工程路径保持，以兼容已有设备。
 
+当前普通Mac为build5：识别暂时UNKNOWN不再直接取消本工具的暂停资格，明确回看后仍可恢复；手动操作、换片、停止/断线保护保持。三播放器各3轮真实技术链与保护补测通过，最新S25集中体验待用户。见 [修复报告](docs/comet/reports/2026-10-19-unknown-pause-recovery.md) 与 [集中验收清单](docs/comet/reports/2026-10-19-unknown-final-acceptance.md)。
+
 个人自用观影小工具。三星 Android 手机本地识别观看方向，主动连接家庭局域网内选定的一台 Windows 或 Mac。桌面自动识别前台视频，不要求逐页授权、选视频或手动绑定。
 
 只允许恢复本工具自行暂停且仍持有恢复资格的视频，不能覆盖用户手动暂停。图像不上传、不默认留存。
@@ -18,4 +20,4 @@
 
 2026-10-18边界收尾：可观察播放控件/时长/暂停位置变化及结束已补回归和真实媒体验证，独立安全审查完成；Mac普通入口更新为build3。相同全部观察值的换片仍无法完整识别，最新S25集中验收待用户。代码集成点82a32d4已推送；详见 [整合记录](docs/comet/reports/2026-10-18-experience-integration.md) 与 [最终验收清单](docs/comet/reports/2026-10-18-final-acceptance.md)。
 
-2026-10-19当前Mac为build4：用户批准“先恢复播放、再一次回退”，原生时间线优先，其余播放器焦点核验后一次Left。B站/YouTube/QuickTime本机技术链与手动暂停保护通过，最新S25集中验收待用户；详见 [本轮报告](docs/comet/reports/2026-10-19-resume-before-rewind.md) 与 [新版验收清单](docs/comet/reports/2026-10-19-final-acceptance.md)。
+2026-10-19恢复后回退阶段的Mac为build4：用户批准“先恢复播放、再一次回退”，原生时间线优先，其余播放器焦点核验后一次Left。B站/YouTube/QuickTime本机技术链与手动暂停保护通过，最新S25集中验收待用户；详见 [本轮报告](docs/comet/reports/2026-10-19-resume-before-rewind.md) 与 [新版验收清单](docs/comet/reports/2026-10-19-final-acceptance.md)。

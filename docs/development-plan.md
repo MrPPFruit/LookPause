@@ -61,3 +61,5 @@ Git 唯一 integration branch 为 codex/experience-integration，从稳定 main 
 2026-10-19 本轮最终代码整合为5230141f6a2712bf3b8d0e50a6d9e2602f8719fd（短分支实现edfd97b→codex/experience-integration）；两分支已推送并核验。tasks8.1～8.3完成，普通Mac build4运行中；后续状态文档提交不改变该代码集成点。main保持766a196；父阶段GAP保持active，不归档。
 
 2026-10-19 当前唯一局部目标更新为LPEXP-03/tasks9：定位真实S25/YouTube暂停后UNKNOWN清资格导致回看不恢复；用户已批准在暂停阶段保留并持续监测归属。Owner为MediaSession，调用方Receiver和相机故障STOP链保持。短分支codex/retain-pause-on-unknown来自最新integration；先真实旧版失败，再最小修复与三播放器连续多轮，完成后普通入口更新/集成。反例与边界见tasks9及本轮报告；不以构建代替S25最终体验，不新增手机/协议字段/权限或长测。
+
+2026-10-19 tasks9.1/9.2已完成有界修复与验证：旧版真实失败、新版9轮实际媒体恢复回退及未知期间强撤销通过，独立审查缺口已闭合；用户解锁后自动完成剩余保护，普通build5已启动、权限与登录登记保持。Owner和父结果映射/反例、实际进度表与限制见2026-10-19-unknown-pause-recovery.md。最终S25体验仍待一次集中验收，不关闭不可观察换片等父GAP；9.3正在整合codex/retain-pause-on-unknown→codex/experience-integration，不合main。

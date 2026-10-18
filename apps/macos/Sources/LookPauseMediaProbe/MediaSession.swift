@@ -47,7 +47,10 @@ final class MediaSession {
         lastIntent = intent
         switch intent {
         case .unknown:
-            cancel("识别状态未知，恢复资格已取消")
+            // 方向不明确不等于暂停归属失效；原输入/目标监测继续运行。
+            if phase == .paused { status = "识别暂时未知，视频保持暂停" }
+            else if phase == .pausing { mediaSessionLog.notice("识别未知，继续核验已提交的暂停") }
+            else { cancel("识别状态未知，恢复资格已取消") }
         case .away, .noFace:
             guard previous != .away && previous != .noFace, phase == nil else { return }
             pause()
@@ -134,7 +137,7 @@ final class MediaSession {
                 }
                 self.target = observed
                 self.phase = .paused
-                status = "已自动暂停，等待回看"
+                status = lastIntent == .unknown ? "识别暂时未知，视频保持暂停" : "已自动暂停，等待回看"
                 if lastIntent == .attending { resume() }
             } else if now >= deadline { cancel("暂停结果不可确认，恢复取消") }
         case .paused:

@@ -57,3 +57,5 @@ Git 唯一 integration branch 为 codex/experience-integration，从稳定 main 
 2026-10-18 最终代码整合：codex/mac-phone-experience@8dec106已合入codex/experience-integration，集成commit为82a32d41852d59f0a7a28093558952c205988d9c，功能/集成分支均已推送并核验。tasks7.3完成；本阶段不再标UNINTEGRATED，但仍active/pending（P2不可观察换片与最终新版S25验收保留），main保持766a196。后续文档提交不改变代码合并点；细分父结果与远端状态见2026-10-18-experience-integration.md。
 
 2026-10-19 当前局部目标为LPEXP-03/tasks8.1～8.3：用户批准恢复后的一次通用回退，原生优先、无能力则焦点核验后一次Left，统一先确认播放再回退。Owner为ResumeRewind/MediaSession/GenericPilot；三播放器本机技术链、初始手动暂停、重复回看与7项回归及独立diff审查通过，普通Mac build4已更新并保留原权限。真实证据见2026-10-19-resume-before-rewind.md，最终S25一次清单见2026-10-19-final-acceptance.md。短分支从最新integration创建为codex/resume-before-rewind，父结果GAP不据局部通过关闭，不合main，不新增Android/协议/权限或长测。
+
+2026-10-19 本轮最终代码整合为5230141f6a2712bf3b8d0e50a6d9e2602f8719fd（短分支实现edfd97b→codex/experience-integration）；两分支已推送并核验。tasks8.1～8.3完成，普通Mac build4运行中；后续状态文档提交不改变该代码集成点。main保持766a196；父阶段GAP保持active，不归档。

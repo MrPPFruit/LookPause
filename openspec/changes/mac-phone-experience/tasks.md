@@ -69,4 +69,6 @@
 
 - [x] 8.1 [LPEXP-03] 将原生优先与一次Left接入已确认恢复之后；复用焦点/输入保护，结果观察不重试，无能力与失败不额外改变播放。
 - [x] 8.2 [LPEXP-03] 最小回归与B站/YouTube/QuickTime真实技术链，验证暂停、恢复、手动暂停保护、一次性和输入撤销；对固定Left执行边界做独立审查。
-- [ ] 8.3 [LPEXP-01] [LPEXP-05] 更新普通Mac构建、核验原权限，保存脱敏报告与集中验收清单；从最新integration短分支整合/推送，父阶段GAP保留，不合main。
+- [x] 8.3 [LPEXP-01] [LPEXP-05] 更新普通Mac构建、核验原权限，保存脱敏报告与集中验收清单；从最新integration短分支整合/推送，父阶段GAP保留，不合main。
+
+2026-10-19 8.1～8.3局部完成：实现edfd97b从最新integration短分支完成，no-ff代码集成点5230141f6a2712bf3b8d0e50a6d9e2602f8719fd；两分支已推送并核验，main保持766a196。普通Mac build4已运行，原权限/登录登记保持。父结果不可观察换片、跨进程竞态与最终新版S25验收仍GAP，阶段active/pending，不合main或归档。见2026-10-19-resume-before-rewind.md。

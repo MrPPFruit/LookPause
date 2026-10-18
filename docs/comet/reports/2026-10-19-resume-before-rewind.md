@@ -46,4 +46,4 @@ Left语义与秒数仍由播放器决定，某些应用可能无效或触发其�
 - [GAP] LPEXP-04 — Evidence: Android未改，沿用此前真实方向输入；S25准确版本/长期后台仍未独立核验。
 - [GAP] LPEXP-05 — Evidence: 本轮没有S25实际头部输入，最终集中验收待用户；技术链不冒充真机。
 
-目标为短分支codex/resume-before-rewind整合到codex/experience-integration；最终集成commit与远端核验在本报告收尾补充。当前change保持active/pending，局部任务通过不关闭整阶段GAP。
+短分支codex/resume-before-rewind实现提交edfd97b，已no-ff合入codex/experience-integration；最终代码集成点5230141f6a2712bf3b8d0e50a6d9e2602f8719fd，两分支在GitHub账号MrPPFruit下推送成功，远端引用已核对。后续状态文档提交不改变该代码集成点，main保持766a196。当前change保持active/pending，局部任务通过不关闭整阶段GAP。

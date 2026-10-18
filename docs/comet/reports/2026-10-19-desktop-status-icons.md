@@ -34,4 +34,4 @@ LPEXP-02/03/04没有新增产品行为；父结果的不可观察换片、跨进
 
 用户方便时一次验证：S25连接后空心绿眼；开始且看屏幕后绿色睁眼；转头后绿色闭眼；停止但不退出连接回到空心绿眼；断开变单色断链。视频手动暂停时即使仍看屏幕也应是睁眼，图标不应驱动播放。识别未知回到空心，原暂停归属保护仍依既有规则执行。
 
-本轮从604f25d上的codex/experience-integration创建codex/desktop-status-icons；最终整合commit和推送结果在收尾后补记。Mac图标已在普通入口可达，本机技术验证通过，S25集中体验待用户；Windows仅设计/素材可用。两端完整功能不能合称交付。
+本轮从604f25d上的codex/experience-integration创建codex/desktop-status-icons；实现commit为c0f36f7b35fe477c5c631c8d4991a88e89bd4ded，no-ff代码集成点为51d639529f7ecf372e99ef523fd23c08ed04e85e。已在GitHub账号MrPPFruit下推送两分支并读回核验；main仍766a1968362bf582ce8fb3b75f8b2d959e1939cb。后续状态记录提交不改变代码合并点。Mac图标已在普通入口可达，本机技术验证通过，S25集中体验待用户；Windows仅设计/素材可用。两端完整功能不能合称交付。

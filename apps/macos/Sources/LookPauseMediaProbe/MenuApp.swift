@@ -13,12 +13,13 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let permissionRow = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private let loginRow = NSMenuItem(title: "登录后启动", action: #selector(toggleLogin), keyEquivalent: "")
     private var startupError: String?
+    private var shownStatus: DesktopStatus?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Logger(subsystem: "com.lookpause.pilot", category: "permissions").notice("普通入口权限：AX=\(AXIsProcessTrusted(), privacy: .public) 输入监听=\(CGPreflightListenEventAccess(), privacy: .public)")
         NSApp.setActivationPolicy(.accessory)
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "PausePal")
+        item.button?.image = DesktopStatus.disconnected.image()
         item.button?.setAccessibilityLabel("PausePal")
         let menu = NSMenu()
         menu.delegate = self
@@ -64,6 +65,12 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuWillOpen(_ menu: NSMenu) { refresh() }
     private func refresh() {
+        let visual = receiver?.desktopStatus ?? .disconnected
+        if shownStatus != visual {
+            item.button?.image = visual.image()
+            shownStatus = visual
+        }
+        item.button?.setAccessibilityLabel("PausePal · " + visual.label)
         connectionRow.title = receiver?.status ?? startupError ?? "接收端不可用"
         mediaRow.title = receiver?.media.status ?? "尚未开始观影"
         var missingPermissions: [String] = []
@@ -74,7 +81,7 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         loginRow.state = SMAppService.mainApp.status == .enabled ? .on :
                          (SMAppService.mainApp.status == .requiresApproval ? .mixed : .off)
         loginRow.title = SMAppService.mainApp.status == .requiresApproval ? "登录后启动（待系统批准）" : "登录后启动"
-        item.button?.toolTip = "PausePal · " + connectionRow.title + " · " + mediaRow.title
+        item.button?.toolTip = "PausePal · " + visual.label + " · " + connectionRow.title + " · " + mediaRow.title
     }
 
     @objc private func toggleLogin() {
@@ -111,7 +118,8 @@ func runReceiverTest() throws {
     receiver.approve = { _, done in done(true) }
     receiver.onStatus = {
         emit(["scope": "loopback-receiver-test", "port": receiver.port ?? 0,
-              "fingerprint": receiver.fingerprint, "status": receiver.status, "media": receiver.media.status])
+              "fingerprint": receiver.fingerprint, "status": receiver.status, "media": receiver.media.status,
+              "icon": receiver.desktopStatus.rawValue])
     }
     try receiver.start()
     withExtendedLifetime(receiver) { RunLoop.current.run() }

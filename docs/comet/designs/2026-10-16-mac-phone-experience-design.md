@@ -12,6 +12,8 @@ canonical_spec: openspec
 
 ## Acceptance Design
 
+2026-10-19 LPEXP-01图标子项：用户确认后，沿Receiver认证与MediaSession只读方向→DesktopStatus→MenuApp投影四态，Owner为现有菜单栏；不解析文案或参与媒体动作。轻量矢量在20pt绘制，深浅色使用不同绿色、断链使用系统模板色，辅助功能和tooltip同步。最小验证seam是既有loopback接收诊断的固定icon枚举、状态映射/绘图回归和普通入口截图；无新产品接口或权限。Windows采用同状态与同源ICO，实际入口和主题缩放验收待Windows环境，不能由Mac代理指标替代；反例与双向映射见tasks10、desktop-status-icons.md和同日图标报告。
+
 - [LPEXP-01] Owner: Mac AppDelegate；Observable: 菜单栏普通启动/状态/登录启动/退出；Counterexample: 仅 CLI 可达；Evidence: bundle 正常启动与截图。
 - [LPEXP-02] Owner: 接收端会话；Observable: 发现、一次批准、可信重连；Counterexample: 未配对设备能控制；Evidence: 双端真实 TLS/拒绝/持久化。
 - [LPEXP-03] Owner: MediaSession；Observable: 持续意图实际控制并取消旧恢复；Counterexample: 固定计时器代替视线；Evidence: 产品媒体输出及撤销。

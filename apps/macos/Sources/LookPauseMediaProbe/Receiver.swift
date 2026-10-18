@@ -81,6 +81,9 @@ final class Receiver {
     var approve: ((String, @escaping (Bool) -> Void) -> Void)?
     var port: UInt16? { listener?.port?.rawValue }
     var fingerprint: String { identity.fingerprint }
+    var desktopStatus: DesktopStatus {
+        DesktopStatus(connected: active != nil, watching: media.isWatching, intent: media.lastIntent)
+    }
 
     init(loopbackOnly: Bool = false) throws {
         self.loopbackOnly = loopbackOnly
@@ -176,6 +179,8 @@ final class Receiver {
             }
             receiverLog.notice("已接收认证意图：\(intent.rawValue, privacy: .public)")
             media.receive(intent)
+            // 有些方向不改变媒体文案，图标仍须反映本条已接受意图。
+            onStatus?()
         case .ping: break
         default: reject(peer, "UNSUPPORTED_OPERATION"); return
         }

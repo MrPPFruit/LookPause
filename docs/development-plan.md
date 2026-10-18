@@ -1,6 +1,6 @@
 # 开发路线与当前状态
 
-当前唯一主目标：S25→Mac 最小体验闭环，见末尾“手机到Mac体验阶段”。完整精准判态不作为先体验的前提，但未知媒体不盲目切换。菜单栏、接收端、Android 普通入口及本地视觉均已有开发实现；S25→Mac→YouTube 暂停/恢复与手动接管保持暂停已有真实证据。完整验收仍有 GAP，不得视为整阶段已交付。
+当前唯一主目标：S25→Mac 最小体验闭环，见末尾“手机到Mac体验阶段”。完整精准判态不作为先体验的前提，但未知媒体不盲目切换。菜单栏、接收端、Android 普通入口及本地视觉均已有开发实现；S25→Mac→YouTube、B站、QuickTime的暂停/恢复与初始手动暂停保护已有真实证据。完整验收仍有 GAP，不得视为整阶段已交付。
 
 ## 第一阶段：前台媒体可行性（SUPERSEDED，剩余 DEFERRED）
 
@@ -49,3 +49,5 @@ Git 唯一 integration branch 为 codex/experience-integration，从稳定 main 
 2026-10-17 最新局部目标仍挂LPEXP-03：回退可选、能力不足跳过且不影响暂停/恢复；当前仅保留可核验原生秒时间线写入，取消猜测Left含义。唯一实施计划为当前change的tasks4.1～4.2，owner为MediaSession/ResumeRewind；不改Android、协议、菜单控件或增加网站适配表。原3.4网页回退是历史原型证据，已被最新决定覆盖。父结果中同页换片、完整S25验收与独立审查/整合的GAP仍保持，不扩张本轮范围。
 
 2026-10-17 S25普通入口复测完成局部tasks5.1（LPEXP-03/05）：YouTube在跳过网页回退后，真实手机离开/回看仍暂停/恢复，初始手动暂停不播放，STOP与重连不继承旧观影。Owner为当前会话，代码owner沿用MediaSession/ResumeRewind/Receiver及既有Android客户端；证据见 docs/comet/reports/2026-10-17-s25-web-retest.md。用户确认一次锁屏导致断开，锁屏持续观影未通过；手机系统版本、B站/本地新版S25整链、同页换片/结束、独立审查/最终集成仍有GAP。长时间后台/耗电继续DEFERRED，不扩大当前阶段。代码基线7b7185e，本轮仅补充证据，开发分支仍codex/mac-phone-experience，未合入integration/main，保持active/UNINTEGRATED。
+
+2026-10-18 当前局部任务为tasks6.1/6.2，仍服务LPEXP-03/05与入口呈现LPEXP-01：真实S25经普通接收端已分别验证B站和QuickTime的初始手动暂停保护及自动暂停/恢复，用户反馈与日志、媒体状态交叉确认。用户确认新显示名PausePal，双端仅更改名称，保留安装/配对/服务身份；双端构建、Mac菜单截图、Android模拟器完整截图通过；S25覆盖更新/新标题/已有配对直连由用户反馈确认，普通进程认证与最终STOP交叉核验。1.3/3.1以前次开关/退出证据加本轮菜单截图闭合，但未做电脑重新登录实测。Owner为当前会话，映射MediaSession/ResumeRewind/Receiver、Android MainActivity/WatchingService及MenuApp/build-app，证据见 docs/comet/reports/2026-10-18-s25-bili-local-pausepal.md。锁屏/长时间后台继续DEFERRED，父阶段同页换片/结束、独立审查/最终集成等GAP保留；本分支未整合，不据此交付整个阶段。

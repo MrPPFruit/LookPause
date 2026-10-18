@@ -5,8 +5,12 @@
 
 Mac SHALL 正常启动为菜单栏应用，被动显示状态、登录启动开关和退出，无 Dock 主窗口；默认请求登录启动，失败如实显示。
 
+#### Scenario: 显示名称兼容更新
+- **WHEN** 用户从旧LookPause覆盖更新到PausePal
+- **THEN** 双端显示名称统一为PausePal，界面继续中文；安装/配对身份、服务类型和凭据不因显示名称变化而重置。
+
 #### Scenario: 普通启动
-- **WHEN** 用户打开 LookPause
+- **WHEN** 用户打开 PausePal
 - **THEN** 菜单栏出现状态、登录启动开关和退出；无需命令行。
 
 <!-- comet-acceptance: LPEXP-02 -->

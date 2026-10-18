@@ -11,12 +11,12 @@ cat > "$bundle/Contents/Info.plist" <<'PLIST'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <key>CFBundleIdentifier</key><string>com.lookpause.pilot</string>
-<key>CFBundleName</key><string>LookPause</string>
-<key>CFBundleDisplayName</key><string>LookPause</string>
+<key>CFBundleName</key><string>PausePal</string>
+<key>CFBundleDisplayName</key><string>PausePal</string>
 <key>CFBundleExecutable</key><string>LookPause</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>0.1.0</string>
-<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleVersion</key><string>2</string>
 <key>LSMinimumSystemVersion</key><string>15.0</string>
 <key>LSUIElement</key><true/>
 <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>

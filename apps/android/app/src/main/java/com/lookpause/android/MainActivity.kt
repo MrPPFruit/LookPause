@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,7 +33,7 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme(primary = Color(0xff9bd3c2)) else lightColorScheme(primary = Color(0xff35675c))) {
                 Scaffold { padding ->
                     Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                        Text("LookPause", style = MaterialTheme.typography.headlineLarge)
+                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge)
                         Text("看向屏幕，继续观看。", style = MaterialTheme.typography.titleMedium)
                         Card(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -45,7 +46,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         Text("选择电脑", style = MaterialTheme.typography.titleMedium)
-                        if (state.computers.isEmpty()) Text("正在寻找同一局域网中的 LookPause 电脑…", style = MaterialTheme.typography.bodyMedium)
+                        if (state.computers.isEmpty()) Text(stringResource(R.string.discovering_computers, stringResource(R.string.app_name)), style = MaterialTheme.typography.bodyMedium)
                         state.computers.forEach { computer ->
                             OutlinedButton(onClick = { controller.connect(computer) }, enabled = !state.connecting && !state.watching,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {

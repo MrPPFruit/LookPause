@@ -18,14 +18,14 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Logger(subsystem: "com.lookpause.pilot", category: "permissions").notice("普通入口权限：AX=\(AXIsProcessTrusted(), privacy: .public) 输入监听=\(CGPreflightListenEventAccess(), privacy: .public)")
         NSApp.setActivationPolicy(.accessory)
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "LookPause")
-        item.button?.setAccessibilityLabel("LookPause")
+        item.button?.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "PausePal")
+        item.button?.setAccessibilityLabel("PausePal")
         let menu = NSMenu()
         menu.delegate = self
         menu.addItem(connectionRow); menu.addItem(mediaRow); menu.addItem(permissionRow)
         menu.addItem(.separator()); loginRow.target = self; menu.addItem(loginRow)
         menu.addItem(.separator())
-        let quit = NSMenuItem(title: "退出 LookPause", action: #selector(quitApp), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "退出 PausePal", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self; menu.addItem(quit)
         item.menu = menu
         do {
@@ -34,7 +34,7 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             receiver.onStatus = { [weak self] in self?.refresh() }
             receiver.approve = { name, completion in
                 let alert = NSAlert()
-                alert.messageText = "允许这台手机连接 LookPause？"
+                alert.messageText = "允许这台手机连接 PausePal？"
                 alert.informativeText = name + " 请求在当前局域网配对。允许后将记住这台设备，仅接收观看方向意图。"
                 alert.addButton(withTitle: "允许")
                 alert.addButton(withTitle: "拒绝")
@@ -74,7 +74,7 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         loginRow.state = SMAppService.mainApp.status == .enabled ? .on :
                          (SMAppService.mainApp.status == .requiresApproval ? .mixed : .off)
         loginRow.title = SMAppService.mainApp.status == .requiresApproval ? "登录后启动（待系统批准）" : "登录后启动"
-        item.button?.toolTip = "LookPause · " + connectionRow.title + " · " + mediaRow.title
+        item.button?.toolTip = "PausePal · " + connectionRow.title + " · " + mediaRow.title
     }
 
     @objc private func toggleLogin() {

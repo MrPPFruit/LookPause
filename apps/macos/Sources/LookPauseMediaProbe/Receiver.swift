@@ -100,7 +100,7 @@ final class Receiver {
         if loopbackOnly { parameters.requiredLocalEndpoint = .hostPort(host: .ipv4(.loopback), port: .any) }
         let listener = try NWListener(using: parameters, on: .any)
         if !loopbackOnly {
-            listener.service = NWListener.Service(name: "LookPause · " + (Host.current().localizedName ?? "Mac"),
+            listener.service = NWListener.Service(name: "PausePal · " + (Host.current().localizedName ?? "Mac"),
                 type: "_lookpause._tcp", txtRecord: NWTXTRecord(["v": "1", "id": serverId, "fp": identity.fingerprint]))
         }
         listener.stateUpdateHandler = { [weak self] state in

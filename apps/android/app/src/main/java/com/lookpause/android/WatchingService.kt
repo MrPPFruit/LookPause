@@ -63,7 +63,7 @@ class WatchingService : LifecycleService() {
         manager.createNotificationChannel(NotificationChannel("watching", "观影识别", NotificationManager.IMPORTANCE_LOW))
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val notification = NotificationCompat.Builder(this, "watching").setSmallIcon(R.drawable.ic_lookpause)
-            .setContentTitle("LookPause 正在识别观看方向").setContentText("图像仅在手机处理，点此查看状态或停止")
+            .setContentTitle(getString(R.string.watching_notification, getString(R.string.app_name))).setContentText("图像仅在手机处理，点此查看状态或停止")
             .setContentIntent(open).setOngoing(true).build()
         try { ServiceCompat.startForeground(this, 1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA) }
         catch (_: RuntimeException) {

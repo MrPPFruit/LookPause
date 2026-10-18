@@ -1,4 +1,4 @@
-# Android 体验端
+# PausePal Android 体验端
 
 本阶段面向三星 S25，APK 仅包含 ARM64。JDK17、Android SDK36、NDK28.2.13676358、Gradle8.13；依赖版本固定在 Gradle 文件中。使用当前 Mac 的 Android SDK，在本地 `local.properties` 配置 `sdk.dir`，不要提交本机路径。
 
@@ -16,3 +16,5 @@ cd apps/android
 `EmulatorConnectionTest` 只在模拟器运行，以显式传入的本机资格端口和指纹连接 `10.0.2.2`；固定地址不进入产品入口，资格接收端只监听Mac回环地址且不发布发现服务。测试APK不要安装到日常手机。
 
 2026-10-17 短时后台功能：模拟器在活动页CREATED状态下持续1分钟，每5秒核验真实模型新帧、帧龄、TLS和观影状态，返回后停止服务；另已通过实际模型/相机、重连及旧轮次回调隔离测试。`WatchingService.lastFrame`仅为进程内时间戳，不保存图像或新增网络字段。用户已将30分钟、锁屏/息屏、发热耗电DEFERRED；短时结果不能称为S25后台稳定性通过。
+
+2026-10-18 显示名称改为PausePal，versionCode=2；applicationId、签名、Keystore及配对格式保持。已有S25可覆盖安装更新，无需卸载或重新配对；S25用户已反馈覆盖更新、新标题与直接连接正常，普通Mac认证/STOP日志另有记录；未通过ADB独立读取S25安装版本。

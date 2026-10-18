@@ -6,7 +6,7 @@
 
 只允许恢复本工具自行暂停且仍持有恢复资格的视频，不能覆盖用户手动暂停。图像不上传、不默认留存。
 
-当前推进 S25→Mac 最小体验阶段，变更 `mac-phone-experience` 保持 active，已整合至 `codex/experience-integration`，尚未合main或完成整体验收。用户已在 S25 安装、配对，YouTube真实转头暂停/回看恢复和手动接管保护已通过；B站与QuickTime通用暂停/恢复及初始手动暂停保护有技术真链证据。按用户最新决定，回退是可选补偿：只对可核验的原生秒时间线执行，网页及能力不足的播放器保留暂停/恢复并跳过回退，不猜测Left含义、不逐站适配。更新后的S25→Mac→YouTube普通入口已复测：网页跳过回退仍暂停/恢复，初始手动暂停保持，停止/重连不补播；2026-10-18已补测B站与QuickTime的S25普通入口：均验证初始手动暂停保护及自动暂停/恢复，详见 docs/comet/reports/2026-10-18-s25-bili-local-pausepal.md。Mac登录启动登记/开关与模拟器短时后台已验证，长时间与耗电DEFERRED；本次S25锁屏后断开，持续锁屏/息屏观影未通过。本轮S25证据见 docs/comet/reports/2026-10-17-s25-web-retest.md；当前回退证据见 docs/comet/reports/2026-10-17-optional-rewind-progress.md；历史播放器结果见 docs/comet/reports/2026-10-17-media-background-followup.md，均不代表全播放器兼容或整阶段交付。
+当前推进 S25→Mac 最小体验阶段，变更 `mac-phone-experience` 保持 active，已整合至 `codex/experience-integration`，尚未合main或完成整体验收。用户已在 S25 安装、配对，YouTube真实转头暂停/回看恢复和手动接管保护已通过；B站与QuickTime通用暂停/恢复及初始手动暂停保护有技术真链证据。按2026-10-19用户最新决定，回退只在自动恢复且确认播放后执行一次：原生秒时间线优先，无此能力则核验焦点/前台/无接管后尝试一次Left；不重试，不逐站适配，具体效果取决于播放器。此前网页跳过结果为历史证据。更新后的S25→Mac→YouTube普通入口已复测：网页跳过回退仍暂停/恢复，初始手动暂停保持，停止/重连不补播；2026-10-18已补测B站与QuickTime的S25普通入口：均验证初始手动暂停保护及自动暂停/恢复，详见 docs/comet/reports/2026-10-18-s25-bili-local-pausepal.md。Mac登录启动登记/开关与模拟器短时后台已验证，长时间与耗电DEFERRED；本次S25锁屏后断开，持续锁屏/息屏观影未通过。本轮S25证据见 docs/comet/reports/2026-10-17-s25-web-retest.md；当前回退证据见 docs/comet/reports/2026-10-17-optional-rewind-progress.md；历史播放器结果见 docs/comet/reports/2026-10-17-media-background-followup.md，均不代表全播放器兼容或整阶段交付。
 
 阅读入口：AGENTS.md → docs/product-spec.md → docs/decision-log.md → docs/development-plan.md → protocol/CONTRACT.md → docs/test-plan.md。原件及来源见 docs/source-index.md。
 
@@ -17,3 +17,5 @@
 开发入口：Android 构建及当前限制见 apps/android/README.md；Mac 执行 `bash apps/macos/build-app.sh` 生成本地 `.local/LookPause.app`。普通菜单栏进程的系统权限必须独立核验，不能用 Codex/终端的已有权限替代。公开仓库不收录安装包、模型权重、本机日志、测试媒体或真实配对凭据。
 
 2026-10-18边界收尾：可观察播放控件/时长/暂停位置变化及结束已补回归和真实媒体验证，独立安全审查完成；Mac普通入口更新为build3。相同全部观察值的换片仍无法完整识别，最新S25集中验收待用户。代码集成点82a32d4已推送；详见 [整合记录](docs/comet/reports/2026-10-18-experience-integration.md) 与 [最终验收清单](docs/comet/reports/2026-10-18-final-acceptance.md)。
+
+2026-10-19当前Mac为build4：用户批准“先恢复播放、再一次回退”，原生时间线优先，其余播放器焦点核验后一次Left。B站/YouTube/QuickTime本机技术链与手动暂停保护通过，最新S25集中验收待用户；详见 [本轮报告](docs/comet/reports/2026-10-19-resume-before-rewind.md) 与 [新版验收清单](docs/comet/reports/2026-10-19-final-acceptance.md)。

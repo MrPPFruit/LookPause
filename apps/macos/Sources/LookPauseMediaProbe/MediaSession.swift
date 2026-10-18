@@ -145,8 +145,8 @@ final class MediaSession {
                 if lastIntent == .away || lastIntent == .noFace {
                     clearOwnership(); pause(); return
                 }
-                if let position = try? rewindMedia(observed, watch: watch) {
-                    rewindFrom = position
+                if let attempt = try? rewindMedia(observed, watch: watch) {
+                    rewindFrom = attempt.from
                     self.phase = .rewinding
                     deadline = now + 2
                     status = "已恢复播放，正在确认回退"

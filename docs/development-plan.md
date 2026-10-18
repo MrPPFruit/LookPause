@@ -55,3 +55,5 @@ Git 唯一 integration branch 为 codex/experience-integration，从稳定 main 
 2026-10-18 边界与安全审查收尾（LPEXP-03，关联02/04/05）：tasks7.1/7.2通过，控制身份、时长/暂停锚点及结束优先级已有根因修复、6项回归和本机固定意图→真实媒体输出；独立审查未发现新增整合阻断，普通Mac build3启动/权限/登录登记正常。Owner为GenericPilot/MediaTimeline/MediaSession；证据见 docs/comet/reports/2026-10-18-media-boundary-security.md。同页复用全部可观察值换片的P2限制与最终新版S25验收仍GAP，锁屏/长时间DEFERRED；不得据此关闭父结果或合main。用户不参与中途测试，最终一次清单见2026-10-18-final-acceptance.md。7.3实际整合与远端核验另记最终commit。
 
 2026-10-18 最终代码整合：codex/mac-phone-experience@8dec106已合入codex/experience-integration，集成commit为82a32d41852d59f0a7a28093558952c205988d9c，功能/集成分支均已推送并核验。tasks7.3完成；本阶段不再标UNINTEGRATED，但仍active/pending（P2不可观察换片与最终新版S25验收保留），main保持766a196。后续文档提交不改变代码合并点；细分父结果与远端状态见2026-10-18-experience-integration.md。
+
+2026-10-19 当前局部目标为LPEXP-03/tasks8.1～8.3：用户批准恢复后的一次通用回退，原生优先、无能力则焦点核验后一次Left，统一先确认播放再回退。Owner为ResumeRewind/MediaSession/GenericPilot；三播放器本机技术链、初始手动暂停、重复回看与7项回归及独立diff审查通过，普通Mac build4已更新并保留原权限。真实证据见2026-10-19-resume-before-rewind.md，最终S25一次清单见2026-10-19-final-acceptance.md。短分支从最新integration创建为codex/resume-before-rewind，父结果GAP不据局部通过关闭，不合main，不新增Android/协议/权限或长测。

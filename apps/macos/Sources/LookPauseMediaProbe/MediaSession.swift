@@ -87,7 +87,7 @@ final class MediaSession {
     }
 
     private func resume() {
-        guard let target, let watch, watch.denied == nil, stillFrontmost(target) else {
+        guard let target, let watch, watch.denied == nil, stillFrontmost(target), target.pauseStillHeld else {
             cancel("前台或手动操作已改变，恢复取消"); return
         }
         do {
@@ -129,6 +129,9 @@ final class MediaSession {
             } else if observed.hint == .paused || now >= deadline { cancel("未确认正在播放，未操作") }
         case .pausing:
             if let observed = try? frontMedia(includeAudio: false), target.matches(observed), observed.hint == .paused {
+                guard observed.timeline?.beforeEnd == true else {
+                    cancel("无法确认暂停，未取得恢复资格"); return
+                }
                 self.target = observed
                 self.phase = .paused
                 status = "已自动暂停，等待回看"
@@ -136,7 +139,7 @@ final class MediaSession {
             } else if now >= deadline { cancel("暂停结果不可确认，恢复取消") }
         case .paused:
             // 持有期间只读上下文和既有控件，避免高频扫描整棵树或枚举音频进程。
-            if controlHint(target.control) != .paused { cancel("媒体状态已改变，恢复取消") }
+            if !target.pauseStillHeld { cancel("媒体状态已改变，恢复取消") }
         case .resuming:
             if let observed = try? frontMedia(includeAudio: false), target.matches(observed), observed.hint == .playing {
                 if lastIntent == .away || lastIntent == .noFace {

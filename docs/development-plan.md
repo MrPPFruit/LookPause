@@ -40,7 +40,7 @@ Git：公开材料基线 main，再创建 codex/foreground-media-feasibility；�
 
 任务来源 openspec/changes/mac-phone-experience/tasks.md；Owner 当前开发会话。父结果→同名规格/design/tasks→apps/macos、apps/android、protocol→本轮报告，均使用 LPEXP-01～05；counterexample 见 proposal Delivery Contract。旧资格阶段只保留历史证据，不假称全通过；未知播放器仍不操作。
 
-Git 唯一 integration branch 为 codex/experience-integration，从稳定 main 建立并导入 1455963 源码基线。阶段短分支 codex/mac-phone-experience 从 integration 创建；阶段结束先整合到 integration。main 只在 S25 整体验收成立后接收。当前未整合实现标 UNINTEGRATED。
+Git 唯一 integration branch 为 codex/experience-integration，从稳定 main 建立并导入 1455963 源码基线。阶段短分支 codex/mac-phone-experience 从 integration 创建；阶段结束先整合到 integration。main 只在 S25 整体验收成立后接收。此前未整合实现标 UNINTEGRATED；当前状态见末尾最新整合记录。
 
 2026-10-17 阶段进展：Android 模拟器真实模型/CameraX、TLS 与重连已验证；S25 普通入口首次配对及 YouTube 观看→离开→恢复已由用户和 Mac 裁决日志交叉确认。手动接管后的暂停保持通过，手机停止识别、Mac 停止裁决及随后断开已有证据。B站/QuickTime 通用识别、同页换片/结束边界、S25 后台/息屏、菜单登录启动/退出功能审查仍为 GAP；本变更保持 active，短分支尚未集成。详见 docs/comet/reports/2026-10-17-mac-phone-experience-progress.md。
 
@@ -51,3 +51,5 @@ Git 唯一 integration branch 为 codex/experience-integration，从稳定 main 
 2026-10-17 S25普通入口复测完成局部tasks5.1（LPEXP-03/05）：YouTube在跳过网页回退后，真实手机离开/回看仍暂停/恢复，初始手动暂停不播放，STOP与重连不继承旧观影。Owner为当前会话，代码owner沿用MediaSession/ResumeRewind/Receiver及既有Android客户端；证据见 docs/comet/reports/2026-10-17-s25-web-retest.md。用户确认一次锁屏导致断开，锁屏持续观影未通过；手机系统版本、B站/本地新版S25整链、同页换片/结束、独立审查/最终集成仍有GAP。长时间后台/耗电继续DEFERRED，不扩大当前阶段。代码基线7b7185e，本轮仅补充证据，开发分支仍codex/mac-phone-experience，未合入integration/main，保持active/UNINTEGRATED。
 
 2026-10-18 当前局部任务为tasks6.1/6.2，仍服务LPEXP-03/05与入口呈现LPEXP-01：真实S25经普通接收端已分别验证B站和QuickTime的初始手动暂停保护及自动暂停/恢复，用户反馈与日志、媒体状态交叉确认。用户确认新显示名PausePal，双端仅更改名称，保留安装/配对/服务身份；双端构建、Mac菜单截图、Android模拟器完整截图通过；S25覆盖更新/新标题/已有配对直连由用户反馈确认，普通进程认证与最终STOP交叉核验。1.3/3.1以前次开关/退出证据加本轮菜单截图闭合，但未做电脑重新登录实测。Owner为当前会话，映射MediaSession/ResumeRewind/Receiver、Android MainActivity/WatchingService及MenuApp/build-app，证据见 docs/comet/reports/2026-10-18-s25-bili-local-pausepal.md。锁屏/长时间后台继续DEFERRED，父阶段同页换片/结束、独立审查/最终集成等GAP保留；本分支未整合，不据此交付整个阶段。
+
+2026-10-18 边界与安全审查收尾（LPEXP-03，关联02/04/05）：tasks7.1/7.2通过，控制身份、时长/暂停锚点及结束优先级已有根因修复、6项回归和本机固定意图→真实媒体输出；独立审查未发现新增整合阻断，普通Mac build3启动/权限/登录登记正常。Owner为GenericPilot/MediaTimeline/MediaSession；证据见 docs/comet/reports/2026-10-18-media-boundary-security.md。同页复用全部可观察值换片的P2限制与最终新版S25验收仍GAP，锁屏/长时间DEFERRED；不得据此关闭父结果或合main。用户不参与中途测试，最终一次清单见2026-10-18-final-acceptance.md。7.3实际整合与远端核验另记最终commit。

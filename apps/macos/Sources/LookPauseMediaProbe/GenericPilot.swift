@@ -30,22 +30,48 @@ struct FrontMedia {
     let bundle: String
     let window: AXUIElement
     let context: String
-    let hint: MediaHint
+    var hint: MediaHint
     let control: AXUIElement?
     let outputActive: Bool?
     let controls: Int
     let evidence: String
     var seekControl: AXUIElement? = nil
     var progress: Double? = nil
+    var timeline: MediaTimeline? = nil
+    var timelineControl: AXUIElement? = nil
 
+    // shortcut: AX相同观察值不是播放项版本；取得稳定播放项ID后再扩大换片保证。
     func matches(_ other: FrontMedia) -> Bool {
         guard pid == other.pid && context == other.context && CFEqual(window, other.window) else { return false }
-        return true
+        for (left, right) in [(control, other.control), (seekControl, other.seekControl)] {
+            switch (left, right) {
+            case let (a?, b?): if !CFEqual(a, b) { return false }
+            case (nil, nil): break
+            default: return false
+            }
+        }
+        switch (timeline, other.timeline) {
+        case let (a?, b?): return a.sameDuration(b)
+        case (nil, nil): return true
+        default: return false
+        }
+    }
+
+    func canResume(_ fresh: FrontMedia) -> Bool {
+        guard matches(fresh), hint == .paused, fresh.hint == .paused,
+              let timeline, let latest = fresh.timeline else { return false }
+        return timeline.holdsPause(latest)
+    }
+
+    var pauseStillHeld: Bool {
+        guard controlHint(control) == .paused, let timeline, let source = timelineControl,
+              let current = readTimeline(source) else { return false }
+        return timeline.holdsPause(current)
     }
 
     var report: [String: Any] {
         ["frontmostBundle": bundle, "contextHash": context, "hint": hint.rawValue,
-         "controls": controls, "progressSeconds": progress.map { $0 as Any } ?? NSNull(), "audioOutputActive": outputActive.map { $0 as Any } ?? NSNull(),
+         "controls": controls, "timelineAvailable": timeline != nil, "durationSeconds": timeline.map { $0.duration as Any } ?? NSNull(), "progressSeconds": progress.map { $0 as Any } ?? NSNull(), "audioOutputActive": outputActive.map { $0 as Any } ?? NSNull(),
          "evidence": evidence, "scope": "local-pilot-only", "experimental": true]
     }
 }
@@ -109,7 +135,7 @@ func frontMedia(includeAudio: Bool = true) throws -> FrontMedia {
     var stack = [(window, true, fileMedia)]
     var budget = 6000
     var candidates: [(AXUIElement, MediaHint)] = []
-    var positions: [Double] = []
+    var positions: [(AXUIElement, MediaTimeline)] = []
     var seekControls: [AXUIElement] = []
     while let (element, inheritedScope, inheritedMedia) = stack.popLast(), budget > 0 {
         budget -= 1
@@ -125,47 +151,48 @@ func frontMedia(includeAudio: Bool = true) throws -> FrontMedia {
         if inScope && mediaScope && role == kAXGroupRole {
             let children = axAttribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? []
             if (2...8).contains(children.count), children.allSatisfy({ axAttribute($0, kAXRoleAttribute) as? String == kAXStaticTextRole }),
-               let progress = mediaProgress(children.compactMap { axAttribute($0, kAXValueAttribute) as? String }.joined()) { positions.append(progress) }
+               let timeline = MediaTimeline.parse(children.compactMap { axAttribute($0, kAXValueAttribute) as? String }.joined()) { positions.append((element, timeline)) }
         }
         if inScope && mediaScope && role == kAXStaticTextRole,
-           let value = axAttribute(element, kAXValueAttribute) as? String, let progress = mediaProgress(value) {
-            positions.append(progress)
+           let value = axAttribute(element, kAXValueAttribute) as? String, let timeline = MediaTimeline.parse(value) {
+            positions.append((element, timeline))
         }
         if inScope && mediaScope && [kAXButtonRole, kAXCheckBoxRole].contains(role),
            (axAttribute(element, kAXEnabledAttribute) as? NSNumber)?.boolValue != false {
             let description = axAttribute(element, kAXDescriptionAttribute) as? String ?? ""
             let label = description.isEmpty ? (axAttribute(element, kAXTitleAttribute) as? String ?? "") : description
             let checked = role == kAXCheckBoxRole ? (axAttribute(element, kAXValueAttribute) as? NSNumber)?.intValue : nil
-            if let hint = mediaHint(label: label, checkValue: checked) {
-                candidates.append((element, hint == .unknown ? controlHint(element) : hint))
+            if mediaHint(label: label, checkValue: checked) != nil {
+                candidates.append((element, controlHint(element)))
             }
         }
         stack.append(contentsOf: (axAttribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).map { ($0, inScope, mediaScope) })
     }
     let unique = budget > 0 && candidates.count == 1
-    let progress = positions.count == 1 ? positions[0] : (seekControls.count == 1 ? seekPosition(seekControls[0]) : nil)
-    var hint = unique ? candidates[0].1 : .unknown
+    let source = positions.count == 1 ? positions[0].0 : (seekControls.count == 1 ? seekControls[0] : nil)
+    let timeline = source.flatMap(readTimeline)
+    let audio = includeAudio ? audioOutputActive(bundle: bundle) : nil
+    var media = FrontMedia(pid: front.processIdentifier, bundle: bundle, window: window, context: context,
+                           hint: unique ? candidates[0].1 : .unknown, control: unique ? candidates[0].0 : nil,
+                           outputActive: audio, controls: candidates.count,
+                           evidence: unique ? "AX_MEDIA_STATE" : "UNKNOWN",
+                           seekControl: seekControls.count == 1 ? seekControls[0] : nil,
+                           progress: timeline?.beforeEnd == true ? timeline?.position : nil,
+                           timeline: timeline, timelineControl: source)
     let canInferProgress = unique && axAttribute(candidates[0].0, kAXRoleAttribute) as? String == kAXButtonRole && controlClassHint(candidates[0].0) == nil
     let now = ProcessInfo.processInfo.systemUptime
     var playingAt: Double?
-    if canInferProgress && hint == .unknown, let progress, let previous = lastProgressSample,
-       previous.pid == front.processIdentifier, previous.context == context, CFEqual(previous.window, window),
-       ProcessInfo.processInfo.systemUptime - previous.time <= 2,
-       progress > previous.position, progress - previous.position <= 8 { hint = .playing; playingAt = now }
-    if canInferProgress && hint == .unknown, let previous = lastProgressSample, previous.pid == front.processIdentifier,
-       previous.context == context, CFEqual(previous.window, window), progress == previous.position, let confirmedAt = previous.playingAt, now - confirmedAt < 0.3 {
-        hint = .playing; playingAt = confirmedAt
+    if canInferProgress && media.hint == .unknown, let progress = media.progress, let previous = lastProgressSample,
+       previous.media.matches(media), let previousPosition = previous.media.progress, now - previous.time <= 2,
+       progress > previousPosition, progress - previousPosition <= 8 { media.hint = .playing; playingAt = now }
+    if canInferProgress && media.hint == .unknown, let previous = lastProgressSample,
+       previous.media.matches(media), media.progress != nil, media.progress == previous.media.progress,
+       let confirmedAt = previous.playingAt, now - confirmedAt < 0.3 {
+        media.hint = .playing; playingAt = confirmedAt
     }
-    lastProgressSample = progress.map { (front.processIdentifier, window, context, $0, now, playingAt) }
-    if seekControls.count == 1, let seconds = numericTimelineSeconds(seekControls[0]),
-       let end = (axAttribute(seekControls[0], kAXMaxValueAttribute) as? NSNumber)?.doubleValue,
-       end > 0, seconds >= end - 0.05 { hint = .unknown }
-    let audio = includeAudio ? audioOutputActive(bundle: bundle) : nil
-    return FrontMedia(pid: front.processIdentifier, bundle: bundle, window: window, context: context,
-                      hint: hint, control: unique ? candidates[0].0 : nil,
-                      outputActive: audio, controls: candidates.count,
-                      evidence: hint != .unknown ? "AX_MEDIA_STATE" : "UNKNOWN",
-                      seekControl: seekControls.count == 1 ? seekControls[0] : nil, progress: progress)
+    if let timeline, !timeline.beforeEnd { media.hint = .unknown }
+    lastProgressSample = (media, now, playingAt)
+    return media
 }
 
 func mediaContextHash(_ value: String) -> String {
@@ -187,25 +214,54 @@ func controlHint(_ control: AXUIElement?) -> MediaHint {
     let description = axAttribute(control, kAXDescriptionAttribute) as? String ?? ""
     let label = description.isEmpty ? (axAttribute(control, kAXTitleAttribute) as? String ?? "") : description
     let checked = (axAttribute(control, kAXRoleAttribute) as? String) == kAXCheckBoxRole ? (axAttribute(control, kAXValueAttribute) as? NSNumber)?.intValue : nil
-    let explicit = mediaHint(label: label, checkValue: checked) ?? .unknown
-    if explicit != .unknown { return explicit }
-    return controlClassHint(control) ?? .unknown
+    return resolvedMediaHint(label: label, checkValue: checked, classes: controlClasses(control))
 }
 
-func controlClassHint(_ control: AXUIElement) -> MediaHint? {
+func resolvedMediaHint(label: String, checkValue: Int?, classes: [String]) -> MediaHint {
+    let explicit = mediaHint(label: label, checkValue: checkValue) ?? .unknown
+    let inherited = mediaClassHint(classes)
+    if inherited == .unknown { return .unknown }
+    if explicit != .unknown, let inherited, inherited != explicit { return .unknown }
+    return explicit != .unknown ? explicit : (inherited ?? .unknown)
+}
+
+func controlClassHint(_ control: AXUIElement) -> MediaHint? { mediaClassHint(controlClasses(control)) }
+
+private func controlClasses(_ control: AXUIElement) -> [String] {
     var node: AXUIElement? = control
+    var classes: [String] = []
     for _ in 0..<8 {
         guard let current = node else { break }
         let role = axAttribute(current, kAXRoleAttribute) as? String ?? ""
         if role == kAXWindowRole || role == "AXWebArea" { break }
-        let classes = axAttribute(current, "AXDOMClassList") as? [String] ?? []
-        if let state = mediaClassHint(classes) { return state }
+        classes += axAttribute(current, "AXDOMClassList") as? [String] ?? []
         node = axElement(current, kAXParentAttribute)
     }
-    return nil
+    return classes
 }
 
-@MainActor private var lastProgressSample: (pid: pid_t, window: AXUIElement, context: String, position: Double, time: Double, playingAt: Double?)?
+@MainActor private var lastProgressSample: (media: FrontMedia, time: Double, playingAt: Double?)?
+
+func readTimeline(_ element: AXUIElement) -> MediaTimeline? {
+    let role = axAttribute(element, kAXRoleAttribute) as? String ?? ""
+    if role == kAXSliderRole {
+        for attribute in [kAXValueAttribute, kAXValueDescriptionAttribute] {
+            if let value = axAttribute(element, attribute) as? String, let timeline = MediaTimeline.parse(value) { return timeline }
+        }
+        // 网页百分比数值不当作秒；只接受明确秒单位的原生范围。
+        if nativeTimeline(element), let current = numericTimelineSeconds(element),
+           let end = (axAttribute(element, kAXMaxValueAttribute) as? NSNumber)?.doubleValue, end.isFinite, end > 0 {
+            return MediaTimeline(position: current, duration: end, rounded: false)
+        }
+        return nil
+    }
+    if role == kAXGroupRole {
+        let children = axAttribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? []
+        guard (2...8).contains(children.count), children.allSatisfy({ axAttribute($0, kAXRoleAttribute) as? String == kAXStaticTextRole }) else { return nil }
+        return MediaTimeline.parse(children.compactMap { axAttribute($0, kAXValueAttribute) as? String }.joined())
+    }
+    return (axAttribute(element, kAXValueAttribute) as? String).flatMap(MediaTimeline.parse)
+}
 
 func foregroundContext(document: String, title: String) -> String {
     let stableTitle = title.replacingOccurrences(of: #"^\(\d+\)\s*"#, with: "", options: .regularExpression)
@@ -214,34 +270,8 @@ func foregroundContext(document: String, title: String) -> String {
 }
 
 func mediaProgress(_ value: String) -> Double? {
-    let parts = value.split(separator: "/").map { $0.trimmingCharacters(in: .whitespaces) }
-    guard parts.count == 2 else { return nil }
-    func seconds(_ text: String) -> Double? {
-        let units = text.split(separator: ":")
-        guard (2...3).contains(units.count), units.allSatisfy({ Double($0).map { $0 >= 0 && $0.isFinite } ?? false }) else { return nil }
-        return units.reduce(0) { $0 * 60 + Double($1)! }
-    }
-    guard let current = seconds(parts[0]), let duration = seconds(parts[1]), duration > 0, current < duration - 0.05 else { return nil }
-    return current
-}
-
-func seekPosition(_ slider: AXUIElement) -> Double? {
-    if let seconds = numericTimelineSeconds(slider) { return seconds }
-    guard let value = axAttribute(slider, kAXValueAttribute) as? String else { return nil }
-    let current = value.components(separatedBy: " of ")[0]
-    if let progress = mediaProgress(value) { return progress }
-    var total = 0.0
-    var found = false
-    for (pattern, scale) in [(#"(\d+(?:\.\d+)?)\s*(?:Hours?|小时)"#, 3600.0),
-                             (#"(\d+(?:\.\d+)?)\s*(?:Minutes?|分)"#, 60.0),
-                             (#"(\d+(?:\.\d+)?)\s*(?:Seconds?|秒)"#, 1.0)] {
-        let regex = try! NSRegularExpression(pattern: pattern, options: .caseInsensitive)
-        if let match = regex.firstMatch(in: current, range: NSRange(current.startIndex..., in: current)),
-           let range = Range(match.range(at: 1), in: current), let amount = Double(current[range]) {
-            total += amount * scale; found = true
-        }
-    }
-    return found ? total : nil
+    guard let timeline = MediaTimeline.parse(value), timeline.beforeEnd else { return nil }
+    return timeline.position
 }
 
 func mediaClassHint(_ classes: [String]) -> MediaHint? {
@@ -301,6 +331,7 @@ func pressMedia(_ target: FrontMedia, expected: MediaHint, watch: InputWatch? = 
         Logger(subsystem: "com.lookpause.pilot", category: "media").notice("执行前判态不一致 expected=\(expected.rawValue, privacy: .public) actual=\(fresh.hint.rawValue, privacy: .public)")
         throw ProbeError.resultNotObserved
     }
+    guard expected != .paused || target.canResume(fresh) else { throw ProbeError.targetChanged }
     guard let control = fresh.control else { throw ProbeError.resultNotObserved }
     guard stillFrontmost(fresh), watch?.denied == nil else { throw ProbeError.targetChanged }
     let label = axAttribute(control, kAXDescriptionAttribute) as? String ?? ""

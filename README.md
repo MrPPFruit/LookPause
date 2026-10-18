@@ -2,7 +2,7 @@
 
 原名 LookPause；2026-10-18 用户确认仅更改显示名称。安装/配对身份、服务标识和工程路径保持，以兼容已有设备。
 
-当前普通Mac为build5：识别暂时UNKNOWN不再直接取消本工具的暂停资格，明确回看后仍可恢复；手动操作、换片、停止/断线保护保持。三播放器各3轮真实技术链与保护补测通过，最新S25集中体验待用户。见 [修复报告](docs/comet/reports/2026-10-19-unknown-pause-recovery.md) 与 [集中验收清单](docs/comet/reports/2026-10-19-unknown-final-acceptance.md)。
+当前Mac构建为build6，新增断链/空心眼睛/睁眼/闭眼的连接与方向图标，见[图标规范与Windows待接入边界](docs/desktop-status-icons.md)。保留build5的UNKNOWN暂停归属修复；手动操作、换片、停止/断线保护保持。三播放器各3轮真实技术链与保护补测通过，最新S25集中体验待用户。见 [修复报告](docs/comet/reports/2026-10-19-unknown-pause-recovery.md) 与 [集中验收清单](docs/comet/reports/2026-10-19-unknown-final-acceptance.md)。
 
 个人自用观影小工具。三星 Android 手机本地识别观看方向，主动连接家庭局域网内选定的一台 Windows 或 Mac。桌面自动识别前台视频，不要求逐页授权、选视频或手动绑定。
 

@@ -19,7 +19,7 @@ final class MediaSession {
     private var deadline = 0.0
     private var lastTick = 0.0
     private var rewindFrom: Double?
-    private var lastIntent: WatchingIntent = .unknown
+    private(set) var lastIntent: WatchingIntent = .unknown
     private(set) var isWatching = false
     private(set) var status = "尚未开始观影" { didSet {
         mediaSessionLog.notice("裁决：\(self.status, privacy: .public)")

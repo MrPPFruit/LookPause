@@ -51,4 +51,4 @@ B站回退“失效”的反馈已核查：此前用户确认能力不足就跳�
 - `bash apps/macos/build-app.sh`：更新普通菜单栏bundle至build3，self-test PASS；签名指定要求保持不变。23:20:29普通进程启动，AX=true、输入监听=true，登录登记状态1（enabled），接收端就绪；无新授权。
 - OpenSpec严格校验、diff检查、公开文件清单与推送核验在整合记录收尾。
 
-局部任务7.1/7.2完成；7.3在正常入口更新和分支合并/推送后完成。父阶段保持active，系统版本完整核验、最新S25最终验收及不可观察换片保证仍GAP。最终人工步骤见2026-10-18-final-acceptance.md。
+局部任务7.1～7.3完成；普通入口已更新，分支已合并/推送，代码合并点82a32d4，详见2026-10-18-experience-integration.md。父阶段保持active，系统版本完整核验、最新S25最终验收及不可观察换片保证仍GAP。最终人工步骤见2026-10-18-final-acceptance.md。

@@ -57,6 +57,8 @@
 
 - [x] 7.1 [LPEXP-03] 复现并修复控件/时间线身份、暂停位置连续性及结束优先裁决，加入最小回归与真实链验证。
 - [x] 7.2 [LPEXP-02] [LPEXP-03] [LPEXP-04] 独立审查媒体执行、认证/生命周期和隐私边界，修复阻断问题，核验B站跳过回退的实际分支。
-- [ ] 7.3 [LPEXP-01] [LPEXP-05] 构建并自动验证新版，记录用户最终验收清单与残余边界，整合至integration并推送；未达到完整产品验收前不合main或归档。
+- [x] 7.3 [LPEXP-01] [LPEXP-05] 构建并自动验证新版，记录用户最终验收清单与残余边界，整合至integration并推送；未达到完整产品验收前不合main或归档。
 
 2026-10-18 技术收尾：7.1/7.2通过，6项回归及真实QuickTime/B站/同页实际视频边界已核验；独立审查未发现新增整合阻断，保留同控件/上下文/时长/位置完全相同时换片不可见的P2限制。新版Mac build3普通入口已启动，AX/输入监听有效、登录登记enabled；无新权限。证据见 docs/comet/reports/2026-10-18-media-boundary-security.md，最终S25集中验收见2026-10-18-final-acceptance.md。历史UNINTEGRATED描述为当时快照，最新分支状态以整合记录为准；父阶段仍active，不据局部修复关闭2.2或合main。
+
+2026-10-18 7.3完成：8dec106以no-ff合入codex/experience-integration，代码合并点82a32d4；两分支推送成功。普通Mac build3已启动；最终用户清单已保存。独立审查与开发整合已补齐，但父结果完整换片身份及最新S25验收仍GAP，2.2/2.3继续保持整阶段pending，不合main、不归档；当前最新整合状态取代历史UNINTEGRATED快照。见2026-10-18-experience-integration.md。

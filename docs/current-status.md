@@ -6,7 +6,7 @@
 
 仓库：<https://github.com/MrPPFruit/LookPause>。当前完整基线为`codex/experience-integration`，本轮开始已核对远端69b6408与本地一致；本次文档整合后的commit见[交接审计报告](comet/reports/2026-10-19-windows-handoff-audit.md)。`main`仍为766a196早期基线，不能用默认clone后的main开始Windows实现。
 
-公开分支已有Mac/Android源码、Gradle wrapper、固定模型下载/校验逻辑、协议schema/fixture、相关测试、现行规格/设计/报告和Windows ICO素材。Windows目录本轮增加阅读入口，仍没有C#工程或可部署exe。**源码已上传，不等于三端产品都已开发完成。**
+跨端基线已有Mac/Android源码、Gradle wrapper、固定模型下载/校验逻辑、协议schema/fixture、相关测试、现行规格/设计/报告和Windows ICO素材。Windows后续开发在`codex/windows-receiver`，已增加C#探针、媒体资格核心与安全回归；尚无可部署的手机接收端/托盘产品，未合入跨端基线。**源码已上传，不等于三端产品都已开发完成。**
 
 按项目约定未上传安装包、模型权重、Mac运行目录、手机/电脑配对凭据、签名私钥、原始日志/截图、测试视频与私人来源。Windows不能从GitHub拿到Mac的Keychain或原Android签名，也不应复制这些秘密。`.local`中的临时APK下载地址不是跨电脑部署入口。
 
@@ -18,7 +18,7 @@
 | Mac媒体 | S25在较早普通入口实际驱动YouTube/B站/QuickTime暂停恢复及手动暂停保护；最新UNKNOWN修复与先恢复后一次回退有三播放器各3轮真实技术链 | 最新构建的S25连续多轮、UNKNOWN后回看、手动暂停/换片/结束/重连集中体验未确认；完全相同可观察值的换片和观察→操作竞态仍是安全边界 |
 | Android | 代码/构建versionCode=2，ARM64，Mac为主开发机；用户已反馈安装、覆盖改名更新并实际联调。此次源码未改，离线assembleDebug及3项方向单测重新执行通过 | Lint实际运行发现1错误/17警告，见下文；S25安装版本及系统/One UI未独立读取；少量连接/错误文字仍写Mac，Windows正式体验前需在Mac统一改为电脑/所选名称并用原签名更新 |
 | 协议 | 体验v1已由Mac/Android实现，固定TLS身份、一次允许配对、会话/序号和停止撤销；正式协议未冻结 | Windows兼容尚未证明，schema本身不是消息安全验证器；认证后error的session字段需按真实Android消费端核对 |
-| Windows | 相同四态的规范、深浅色8个多尺寸ICO及本轮交接材料 | 没有接收端、GSMTC/UIA控制、托盘、自启或安装包，均须在Windows实现和实测 |
+| Windows开发分支 | 已核对Windows10 x64/.NET10；只读GSMTC/UIA探针、本机UIA资格核心、31项模拟安全回归；中间版有部分Chrome真实暂停/UNKNOWN/恢复证据 | 最新版连续三轮未确认播放进度，保护矩阵及B站/本地多轮未通过；本轮桌面工具因URL核验停止；LAN接收端、托盘、自启、回退与S25尚未接入，见[阶段报告](comet/reports/2026-10-19-windows-media-progress.md) |
 
 本轮无ADB设备连接，没有补新的S25动作；不能从构建/单测推断三星相机或后台稳定。Android Lint已运行完成并失败，不用构建通过替代静态检查。
 

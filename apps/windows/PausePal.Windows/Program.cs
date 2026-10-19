@@ -17,6 +17,11 @@ internal static class Program
     [STAThread]
     static void Main(string[] args)
     {
+        if (args is ["--pilot"])
+        {
+            Pilot.Run();
+            return;
+        }
         if (args is ["--probe"])
         {
             RunBoundedProbe().GetAwaiter().GetResult();
@@ -27,7 +32,7 @@ internal static class Program
             Probe().GetAwaiter().GetResult();
             return;
         }
-        Console.WriteLine("PausePal Windows：当前仅支持 --probe 只读资格检查。");
+        Console.WriteLine("PausePal Windows：--probe 为只读探查；--pilot 为本机媒体资格入口。手机接收端与托盘尚未实现。");
     }
 
     static async Task RunBoundedProbe()
@@ -95,7 +100,7 @@ internal static class Program
                 var id = string.Join(".", node.GetRuntimeId());
                 if (c.ControlType == ControlType.Document) document = id;
                 // 语义必须完整匹配，不能把 PausePal 等子串当播放器控件。
-                var playback = Regex.IsMatch(c.Name, @"^(?:play|pause|播放|暂停)(?:\s*\([a-z ]+\))?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                var playback = UiMedia.Semantics(c.Name) != Playback.Unknown;
                 var clock = Regex.IsMatch(c.Name, @"^(?:\d{1,2}:)?\d{1,2}:\d{2}(?:\s*/\s*(?:\d{1,2}:)?\d{1,2}:\d{2})?$|^\d+ (?:Minutes?|Hours?) .+ of \d+ (?:Minutes?|Hours?) .+$", RegexOptions.CultureInvariant);
                 if (c.ControlType == ControlType.Document || c.ControlType == ControlType.Slider ||
                     ((c.ControlType == ControlType.Button || c.ControlType == ControlType.Text) && (playback || clock)))
@@ -106,8 +111,12 @@ internal static class Program
                         var r = ((RangeValuePattern)range).Current;
                         value = new { r.Value, r.Minimum, r.Maximum, r.IsReadOnly };
                     }
+                    else if (c.ControlType == ControlType.Slider && node.TryGetCurrentPattern(ValuePattern.Pattern, out var numeric) &&
+                        double.TryParse(((ValuePattern)numeric).Current.Value, System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out var scalar) && double.IsFinite(scalar))
+                        value = new { Value = scalar, Unit = "unknown" };
                     Console.WriteLine(JsonSerializer.Serialize(new { kind = "control", type = c.ControlType.ProgrammaticName,
-                        semantic = playback ? (Regex.IsMatch(c.Name, @"^(?:pause|暂停)", RegexOptions.IgnoreCase) ? "PAUSE" : "PLAY") : clock ? "TIME" : "OTHER",
+                        semantic = playback ? (UiMedia.Semantics(c.Name) == Playback.Playing ? "PAUSE" : "PLAY") : clock ? "TIME" : "OTHER",
                         context = c.ControlType == ControlType.Document ? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(c.Name))) : null,
                         id, document, parent, offscreen = c.IsOffscreen, enabled = c.IsEnabled,
                         invoke = node.TryGetCurrentPattern(InvokePattern.Pattern, out _), value }));

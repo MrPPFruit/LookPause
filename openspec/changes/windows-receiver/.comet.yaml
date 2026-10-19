@@ -1,6 +1,6 @@
 state_version: 3
 workflow: full
-phase: design
+phase: build
 delivery_outcome: pending
 build_mode: direct
 isolation: branch

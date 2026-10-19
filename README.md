@@ -2,7 +2,7 @@
 
 原名 LookPause；2026-10-18 用户确认仅更改显示名称。安装/配对身份、服务标识和工程路径保持，以兼容已有设备。
 
-**Windows接续入口**：[当前状态及未收尾项](docs/current-status.md) → [Windows开发交接](docs/windows-handoff.md) → [可直接粘贴到Windows Codex的指令](docs/windows-codex-prompt.md)。完整源码在`codex/experience-integration`；`main`仍为早期基线。Windows目录目前只有说明/占位，没有可部署程序。
+**Windows接续入口**：[当前状态及未收尾项](docs/current-status.md) → [Windows开发交接](docs/windows-handoff.md) → [可直接粘贴到Windows Codex的指令](docs/windows-codex-prompt.md)。跨端完整基线在`codex/experience-integration`；`main`仍为早期基线。Windows开发分支`codex/windows-receiver`已有本机资格核心与安全回归，真实媒体矩阵尚未通过，手机接收端和托盘未接入；见[阶段报告](docs/comet/reports/2026-10-19-windows-media-progress.md)。目前没有可部署的Windows产品。
 
 当前Mac构建为build6，新增断链/空心眼睛/睁眼/闭眼的连接与方向图标，见[图标规范与Windows待接入边界](docs/desktop-status-icons.md)。保留build5的UNKNOWN暂停归属修复；手动操作、换片、停止/断线保护保持。三播放器各3轮真实技术链与保护补测通过，最新S25集中体验待用户。见 [修复报告](docs/comet/reports/2026-10-19-unknown-pause-recovery.md) 与 [集中验收清单](docs/comet/reports/2026-10-19-unknown-final-acceptance.md)。
 

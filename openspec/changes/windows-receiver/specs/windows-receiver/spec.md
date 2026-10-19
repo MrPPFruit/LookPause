@@ -1,0 +1,40 @@
+## ADDED Requirements
+
+### Requirement: LPWIN-01 唯一前台安全媒体
+接收端 SHALL 只控制已确认的唯一前台媒体，START 不播放；只有本工具实际暂停确认后才获得同媒体恢复资格。
+
+#### Scenario: 未知与强撤销
+- **WHEN** 本工具暂停待确认或已确认期间收到 UNKNOWN
+- **THEN** 保留原确认期限和安全观察，明确 ATTENDING 才可恢复；接管、目标变化、结束、停止或断线立即撤销，后续回看不补播。
+
+#### Scenario: 前台歧义
+- **WHEN** GSMTC 当前会话不能证明前台窗口及活动媒体，或有多个合格媒体
+- **THEN** 不发送任何媒体控制，记录能力不足；构建成功不代表通过。
+
+### Requirement: LPWIN-02 现有手机协议
+接收端 SHALL 兼容现有 S25 体验协议 v1，以独立且持久的 Windows 身份、固定 TLS 证书、一次允许配对和严格 session/seq 边界工作。
+
+#### Scenario: 连接生命周期
+- **WHEN** 手机重连、停止、超时、发送旧会话或重复序号
+- **THEN** 旧恢复资格不能继续，认证后每个响应含当前 session，ack/error关联 seq；连接或 ACK 不表示媒体控制成功。
+
+### Requirement: LPWIN-ICON-01 普通托盘
+托盘 SHALL 使用已确认四态，日常仅状态、默认开启登录后启动开关、退出，显示中文。
+
+#### Scenario: 停止仍连接
+- **WHEN** 已认证手机停止观影或方向未知
+- **THEN** 空心绿眼；断线为单色断链，重连不继承方向；用普通入口完整截图核验。
+
+### Requirement: LPWIN-03 恢复后一次回退
+接收端 SHALL 仅在有效归属媒体恢复且确认 playing 后尝试一次回退；原生时间线优先，无能力时只有安全焦点可一次 Left，不重试。
+
+#### Scenario: 无安全回退能力
+- **WHEN** 已恢复播放但时间线或焦点不安全
+- **THEN** 跳过回退且不影响恢复，不将命令返回当实际进度证明。
+
+### Requirement: LPWIN-04 分层交付
+Windows 交付 SHALL 分别记录静态检查、构建、自动化、真实播放器、普通托盘和 S25 实机结果。
+
+#### Scenario: 上游未收尾
+- **WHEN** Windows 阶段取得局部证据
+- **THEN** 不关闭 Mac/Android GAP、不合 main，实体手机动作留作一次集中验收。

@@ -1,0 +1,13 @@
+state_version: 3
+workflow: full
+phase: design
+delivery_outcome: pending
+build_mode: direct
+isolation: branch
+verify_mode: null
+design_doc: docs/comet/designs/2026-10-19-windows-receiver-design.md
+plan: null
+verify_result: pending
+verification_report: null
+branch_status: pending
+archived: false

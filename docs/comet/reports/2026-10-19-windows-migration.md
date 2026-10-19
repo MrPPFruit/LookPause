@@ -46,3 +46,7 @@
 - Mac 最新集中验收、Android AND-CLOSE-01/02/跨电脑文案仍归原 owner，未改 APK/签名、未关闭父 change、未合 main。
 
 用户步骤见 [Windows 验收说明](../../../apps/windows/验收说明.md)。未经用户最终验收，不归档 Windows change 或宣称 Windows 产品已全部完成。
+
+## 开发分支交付记录
+
+实现集成点 `1be5c09` 已提交并推送 `origin/codex/windows-receiver`。推送前实际 `gh api user --jq .login` 返回 MrPPFruit；公开清单为 Windows 源码、测试、OpenSpec 与中文说明，未含本机二进制、日志、截图、媒体或配对身份。最终代码再跑 54/54 及 publish 通过，严格 OpenSpec 校验通过。修复后的最终独立复核未发现新的确定代码阻断，可以交用户集中验收；原生媒体、S25、系统托盘与登录实景仍开放。

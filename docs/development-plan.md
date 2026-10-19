@@ -71,3 +71,5 @@ Git 唯一 integration branch 为 codex/experience-integration，从稳定 main 
 2026-10-19 tasks9本轮收尾：修复95b4f50与证据24825c4已整合至codex/experience-integration，代码合并点5895fa4a9122b724b76ae810793222ef15f4a76b；两分支已推送并核验。build5普通入口运行、原权限有效。最新S25集中体验清单已就绪；父阶段仍active/pending，不合main、不归档，后续记录提交不改变代码合并点。
 
 2026-10-19图标技术子项10.1/10.2完成开发整合：c0f36f7→no-ff集成点51d6395，功能与integration分支已推送核验；main未变。普通build6运行，本机回归/接收链/视觉证据见图标报告。LPWIN-ICON-01和最新S25图标体验仍GAP，不据素材或本机测试称跨端交付。
+
+2026-10-19任务11交接准备完成：文档55da86c→no-ff整合点47e03dc，已推送并从实际GitHub新clone核验20个必需文件和导航可达。Mac/Android实现未变；Android Lint的真实1错误/17警告及跨电脑提示文案已登记AND-CLOSE-01/02，最新S25/Windows仍GAP。后续状态文档不改变整合点，不合main或归档。可复制的Windows Codex接续指令与完整指南均已公开在integration分支。

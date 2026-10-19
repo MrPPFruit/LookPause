@@ -78,6 +78,8 @@ Windows目标沿用轻量后台托盘：状态、登录后启动开关、退出�
 
 先LPWIN-01本机核心；再LPWIN-02网络兼容和LPWIN-ICON-01普通入口；最后LPWIN-03与LPWIN-04集中整链。若前台判定机制不成立，先查根因和最小替代，不先扩Harness/证据框架或逐站适配。默认单代理直接推进，普通任务不叠加代理审查；认证/输入边界等高风险修改按适用Comet规则验证。
 
+本地测试使用Windows上已安装、能核验实际状态的播放器，不依赖QuickTime。自行选择可合法使用的公开样片，只在本机保存；网页使用当前Windows浏览器的B站/YouTube，不搬运Mac私人标签/会话链接，也不把样片标题或地址写成产品适配条件。现行公开规格/源码已足够启动，无需取得Mac仅本地保留的原始资料。
+
 ## 7. 分支、交付和用户配合
 
 当前唯一跨端integration是`codex/experience-integration`。Windows从其最新远端创建`codex/windows-receiver`短分支；若该分支已有工作，先检查其起点与状态并安全续做。每个可独立验收阶段提交/整合，不能从过期main反复拉平级分支；若未来多阶段必须设Windows integration，先记录唯一目标与最终合回路径，不让两个集成分支同时被称为最新跨端基线。所有GitHub写操作前核验`gh api user --jq .login`为MrPPFruit。开发分支可按用户授权推送，main保持既有完整验收门槛；日志、视频、密钥/签名、私有SDK路径不上传。

@@ -101,4 +101,6 @@
 唯一局部目标服务LPEXP-05/01：核对上传范围与Mac/Android未收尾项，形成不依赖本机私有资料的Windows接续指令。普通入口是用户在Windows当前Codex对话粘贴指令，不注册项目/创建额外会话。本轮仅审计、相关构建验证和文档，不启动Windows代码实现、不改变产品控制流。完成条件：本地/远端基线一致、安卓构建结果如实记录、未验收项不被关闭、Windows关键接口/阶段/兼容边界有来源、从公开分支的新clone能找到完整交接材料。反例：只说已上传，但新电脑clone默认main而缺失Android核心，或把图标ICO当作Windows已支持。Owner为当前会话文档审计，证据见同日windows-handoff-audit报告；父阶段2.2/2.3继续pending，不合main。
 
 - [x] 11.1 [LPEXP-05] [LPEXP-01] 核对源码/远端/构建与剩余验收，修正会误导交接的过时现行说明。
-- [ ] 11.2 [LPEXP-05] 整理Windows环境、协议与媒体裁决移植指导和单段Codex接续指令，验证公开路径/clone可读，整合integration并推送核验。
+- [x] 11.2 [LPEXP-05] 整理Windows环境、协议与媒体裁决移植指导和单段Codex接续指令，验证公开路径/clone可读，整合integration并推送核验。
+
+11.1/11.2交接结果闭合：文档55da86c已no-ff整合至47e03dc6a72bb438b38239cff19b39f57affc48e并推送，两端源码/图标与20个必需文件经实际GitHub新clone验证可达，导航/公开文件检查通过。Mac10项与Android构建/3项单测通过，但实际Lint1错误/17警告、最新S25体验、Windows实现仍GAP；当前交接完成不代表三端交付或父阶段2.2/2.3完成。后续状态文档提交不改变本次整合点，main未变。

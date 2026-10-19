@@ -43,4 +43,8 @@ Lint错误为CAMERA权限对应硬件feature声明缺失；17警告分为4项兼
 
 ## 整合与公开可读性
 
-本轮短分支`codex/windows-handoff`从最新integration创建；实现/文档审核、公开文件/秘密扫描、Markdown本地链接、OpenSpec严格校验，以及实际GitHub浅克隆的文件可达检查在收尾完成后补记。目标仍为`codex/experience-integration`，不合main；最终commit/推送核验不代表Mac、Android或Windows全部交付。
+本轮短分支`codex/windows-handoff`从69b6408上的integration创建，文档commit为55da86c0e982df8f4a743829b6b8ff88a8a5d68b，no-ff整合点47e03dc6a72bb438b38239cff19b39f57affc48e。GitHub写前核验账号MrPPFruit，两分支已推送。后续状态文档提交不改变整合点，main保持766a196。
+
+12个修改/新增文件均为Markdown，逐项公开白名单、秘密模式扫描、所有本地Markdown链接和OpenSpec严格校验通过；产品源码差异为零。之后从真正GitHub HTTPS地址按指定分支浅克隆到本机临时目录，HEAD与47e03dc完全一致，工作树干净；20个必需文档/协议/源码/wrapper/图标路径、导航链接及无私有产物检查全部通过，记录仅保留.local/handoff-public-readability.log。不是仅从本地工作树或缓存判断“已上传”。临时clone检查后清理。
+
+本轮交接资料可用，任务11闭合；Windows尚未部署，安卓Lint和最新S25验收未闭合，父change保持active/pending。用户可在完成Mac/Android收尾后，将windows-codex-prompt整段粘贴到Windows当前Codex对话，不需要Mac私有文件。若届时仍有GAP，下一会话应照实保留并明确本轮Windows目标，不把文档上传等同三端交付。

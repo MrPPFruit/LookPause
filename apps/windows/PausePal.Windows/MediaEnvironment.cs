@@ -8,7 +8,10 @@ internal interface IMediaEnvironment : IRevocation
     nint Foreground { get; }
     UiMedia Observe();
     void Invoke(UiMedia media, Playback expected, long epoch);
+    RewindResult Rewind(UiMedia media, long epoch);
 }
+
+internal enum RewindResult { Skipped, Attempted }
 
 internal sealed class WindowsMediaEnvironment(InputWatch input) : IMediaEnvironment
 {
@@ -19,4 +22,5 @@ internal sealed class WindowsMediaEnvironment(InputWatch input) : IMediaEnvironm
     public nint Foreground => Program.GetForegroundWindow();
     public UiMedia Observe() => UiMedia.Read();
     public void Invoke(UiMedia media, Playback expected, long epoch) => media.Invoke(expected, input, epoch);
+    public RewindResult Rewind(UiMedia media, long epoch) => MediaRewind.Try(media, input, epoch);
 }

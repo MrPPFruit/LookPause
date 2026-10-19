@@ -32,7 +32,8 @@ internal static class Program
             Probe().GetAwaiter().GetResult();
             return;
         }
-        Console.WriteLine("PausePal Windows：--probe 为只读探查；--pilot 为本机媒体资格入口。手机接收端与托盘尚未实现。");
+        if (args.Length == 0) { TrayApp.Run(); return; }
+        Console.WriteLine("PausePal Windows：无参数启动托盘；--probe 为只读探查；--pilot 为本机媒体资格入口。");
     }
 
     static async Task RunBoundedProbe()

@@ -5,6 +5,8 @@ namespace PausePal.Windows;
 // 钩子只递增代次，不保存按键、鼠标坐标或窗口标题。UI 消息线程不得执行 UIA。
 internal sealed class InputWatch : IDisposable, IRevocation
 {
+    internal static readonly nuint OwnRewindTag = (nuint)System.Security.Cryptography.RandomNumberGenerator.GetInt32(1, int.MaxValue);
+    [StructLayout(LayoutKind.Sequential)] private struct KeyboardEvent { public uint Key, Scan, Flags, Time; public nuint Extra; }
     private delegate nint Hook(int code, nint message, nint data);
     private delegate void WindowEvent(nint hook, uint kind, nint window, int objectId, int childId, uint thread, uint time);
     private readonly Hook keyboard;
@@ -15,9 +17,10 @@ internal sealed class InputWatch : IDisposable, IRevocation
     private readonly nint windowHook;
     private readonly System.Windows.Forms.Timer pump;
     private long epoch;
+    private int disposed;
     private readonly InputHeartbeat heartbeat;
     public long Epoch => Interlocked.Read(ref epoch);
-    public bool Healthy => keyboardHook != 0 && mouseHook != 0 && windowHook != 0 &&
+    public bool Healthy => Volatile.Read(ref disposed) == 0 && keyboardHook != 0 && mouseHook != 0 && windowHook != 0 &&
                            heartbeat.Healthy(Environment.TickCount64);
     public void Revoke() => Interlocked.Increment(ref epoch);
 
@@ -26,7 +29,12 @@ internal sealed class InputWatch : IDisposable, IRevocation
         heartbeat = new InputHeartbeat(Environment.TickCount64, Revoke);
         keyboard = (code, message, data) =>
         {
-            if (code >= 0) Interlocked.Increment(ref epoch);
+            if (code >= 0)
+            {
+                var item = Marshal.PtrToStructure<KeyboardEvent>(data);
+                // 只排除本进程带随机标记的一次 Left；不忽略其他注入事件。
+                if (!(item.Key == 0x25 && (item.Flags & 0x10) != 0 && item.Extra == OwnRewindTag)) Interlocked.Increment(ref epoch);
+            }
             return CallNextHookEx(0, code, message, data);
         };
         mouse = (code, message, data) =>
@@ -46,6 +54,8 @@ internal sealed class InputWatch : IDisposable, IRevocation
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref disposed, 1) != 0) return;
+        Revoke();
         pump.Dispose();
         if (keyboardHook != 0) UnhookWindowsHookEx(keyboardHook);
         if (mouseHook != 0) UnhookWindowsHookEx(mouseHook);

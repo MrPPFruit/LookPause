@@ -101,6 +101,9 @@ internal sealed class MediaSession(IMediaEnvironment environment)
             lastObservation = now;
             if (Phase == MediaPhase.Checking)
             {
+                Console.WriteLine(JsonSerializer.Serialize(new { kind = "progress-check", from = target.Position,
+                    to = observed.Position, sampleAgeMs = now - observed.ObservedAt, remainingMs = deadline - now,
+                    state = observed.State.ToString() }));
                 if (now > deadline || observed.State != Playback.Playing) throw new InvalidOperationException("未确认实际播放进度");
                 if (observed.Position > target.Position)
                 {
@@ -131,7 +134,11 @@ internal sealed class MediaSession(IMediaEnvironment environment)
                 if (observed.State == Playback.Playing && observed.Position > target.Position)
                 {
                     var completedEpoch = epoch;
-                    Cancel("已确认恢复播放，回退尚未接入", observed.Position);
+                    // 先消费本轮恢复资格；回退失败也不重新授予或补发播放。
+                    Clear();
+                    var rewind = Intent == WatchingIntent.ATTENDING && environment.Healthy && environment.Epoch == completedEpoch
+                        ? environment.Rewind(observed, completedEpoch) : RewindResult.Skipped;
+                    SetStatus(rewind == RewindResult.Attempted ? "已确认恢复播放，已尝试一次回退（效果待确认）" : "已确认恢复播放，安全回退不可用", observed.Position);
                     if (Intent is WatchingIntent.AWAY or WatchingIntent.NO_FACE) Pause(completedEpoch);
                 }
             }

@@ -95,3 +95,10 @@
 10.1～10.2有界技术结果通过：普通build6运行、10项回归、实际TLS接收状态投影与深浅色原生预览/普通菜单栏截图已核验。未补实体S25四态与展开菜单截图；Windows只有统一规范/ICO，LPWIN-ICON-01仍GAP，两端整体功能不能称交付。证据和最终集成记录见2026-10-19-desktop-status-icons.md，父阶段仍active/pending。
 
 2026-10-19 图标技术子项已整合：实现c0f36f7b35fe477c5c631c8d4991a88e89bd4ded，no-ff代码集成点51d639529f7ecf372e99ef523fd23c08ed04e85e；两分支均已推送并读回核验，main仍766a196，普通build6继续运行。后续状态文档不改变代码集成点；Windows与最新S25图标验收GAP保持。
+
+## 11. 状态复核与Windows交接准备（2026-10-19）
+
+唯一局部目标服务LPEXP-05/01：核对上传范围与Mac/Android未收尾项，形成不依赖本机私有资料的Windows接续指令。普通入口是用户在Windows当前Codex对话粘贴指令，不注册项目/创建额外会话。本轮仅审计、相关构建验证和文档，不启动Windows代码实现、不改变产品控制流。完成条件：本地/远端基线一致、安卓构建结果如实记录、未验收项不被关闭、Windows关键接口/阶段/兼容边界有来源、从公开分支的新clone能找到完整交接材料。反例：只说已上传，但新电脑clone默认main而缺失Android核心，或把图标ICO当作Windows已支持。Owner为当前会话文档审计，证据见同日windows-handoff-audit报告；父阶段2.2/2.3继续pending，不合main。
+
+- [x] 11.1 [LPEXP-05] [LPEXP-01] 核对源码/远端/构建与剩余验收，修正会误导交接的过时现行说明。
+- [ ] 11.2 [LPEXP-05] 整理Windows环境、协议与媒体裁决移植指导和单段Codex接续指令，验证公开路径/clone可读，整合integration并推送核验。

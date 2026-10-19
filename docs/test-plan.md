@@ -1,5 +1,7 @@
 # 验证计划
 
+2026-10-19交接复核：同一源码的Mac10项Swift回归和self-test通过，Android离线assembleDebug与3项方向单测全部重新执行通过；Lint初次离线缺依赖，正常解析后实际1 error/17 warnings，未通过。具体错误/警告分类、未收尾Owner、无ADB设备与新版S25集中验收GAP见[当前状态](current-status.md)和[交接审计](comet/reports/2026-10-19-windows-handoff-audit.md)。本轮仅核验/整理文档，不以GitHub存在源码替代Windows运行或手机验收。
+
 状态：S25→Mac 普通入口的YouTube、B站和QuickTime样例已取得暂停/恢复与初始手动暂停保护的真实证据；build5起暂停期间UNKNOWN保留归属、强撤销仍生效，完整产品验收尚未通过。原件仅本地保留；下表保留 T01–T20 编号。时间阈值和性能指标是待验证初值。
 
 2026-10-19 LPEXP-01图标：10项Swift回归通过；本机TLS实际接收链已验证认证、START、ATTENDING、AWAY、NO_FACE、UNKNOWN、STOP、断线、重连及超时的四态投影；普通build6启动与单色断链截图、深浅色实际尺寸原生预览已审查。本轮不冒充S25头部动作或四态普通菜单截图，最终用户验收为连接后空心→开始/看屏幕睁眼→侧看闭眼→停止空心→断开断链；UNKNOWN用空心、不改变媒体归属规则。Windows仅统一设计与ICO，托盘运行及主题缩放验收仍GAP。证据见2026-10-19-desktop-status-icons.md。

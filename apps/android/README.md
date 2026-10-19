@@ -1,5 +1,7 @@
 # PausePal Android 体验端
 
+2026-10-19交接复核：源码和Gradle wrapper已在`codex/experience-integration`公开；APK构建与3项方向单测重新执行通过，但Lint实际报1错误/17警告，尚未完全收尾，详见[当前状态](../../docs/current-status.md)。本轮不改手机代码/安装包、不请求用户重装。少量Mac专用提示与Android静态检查问题仍由Mac主开发机处理；Windows优先使用已安装S25包联调，不能另签debug包覆盖或上传原签名。
+
 本阶段面向三星 S25，APK 仅包含 ARM64。JDK17、Android SDK36、NDK28.2.13676358、Gradle8.13；依赖版本固定在 Gradle 文件中。使用当前 Mac 的 Android SDK，在本地 `local.properties` 配置 `sdk.dir`，不要提交本机路径。
 
 ```bash

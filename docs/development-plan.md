@@ -1,5 +1,7 @@
 # 开发路线与当前状态
 
+2026-10-19本轮唯一目标为LPEXP-05/01的状态复核与Windows交接准备，不启动Windows实现。任务11.1/11.2→[当前状态](current-status.md)/[Windows交接](windows-handoff.md)/[审计报告](comet/reports/2026-10-19-windows-handoff-audit.md)；Owner为当前会话，反例是默认clone旧main或将素材/构建误称三端已交付。Mac最新10项回归与Android构建/3项单测复核通过；Android Lint实际1错误/17警告，新列AND-CLOSE-01/02映射父结果LPEXP-04，由Mac的Android owner后续处理，不在本次文档审计伪修复。LPWIN-01/02/03/04及LPWIN-ICON-01是Windows未来阶段的验收输入，具体任务需在Windows会话建立；未实现/未验证，不解锁或归档Mac父阶段。用户选择将接续指令粘贴到Windows Codex当前对话框。
+
 2026-10-19最新局部目标为LPEXP-01的形象状态图标，任务10.1～10.2、Owner为Receiver→DesktopStatus→MenuApp，普通入口为Mac菜单栏。未连接断链、连接等待/未知空心眼睛、观影睁眼/闭眼已获用户批准；不能用媒体暂停状态替代观看方向。完成条件为认证/方向/停止/断线/重连投影的真实接收链、绘图与普通入口截图；反例是样图正确但连接后菜单栏仍固定。Mac构建与本机证据见[图标报告](comet/reports/2026-10-19-desktop-status-icons.md)，S25集中图标验收待用户。跨端用户结果另留LPWIN-ICON-01：Windows托盘采用同设计与素材，Owner为未来Windows接收端，规格见desktop-status-icons.md；Windows目录为空且当前无Windows运行环境，实际接入/截图/真机证据GAP，不在本轮Mac阶段实现未经实测的Windows应用。父阶段与main接收条件仍不变。
 
 当前唯一主目标：S25→Mac 最小体验闭环，见末尾“手机到Mac体验阶段”。完整精准判态不作为先体验的前提，但未知媒体不盲目切换。菜单栏、接收端、Android 普通入口及本地视觉均已有开发实现；S25→Mac→YouTube、B站、QuickTime的暂停/恢复与初始手动暂停保护已有真实证据。完整验收仍有 GAP，不得视为整阶段已交付。

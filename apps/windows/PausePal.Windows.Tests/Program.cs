@@ -8,11 +8,11 @@ var checks = new Dictionary<string, Action>
 {
     ["开始不播放"] = () => { var (e,s)=Setup(); s.Start(); s.Receive(WatchingIntent.ATTENDING); Equal(0,e.Actions.Count); },
     ["初始手动暂停不恢复"] = () => { var (e,s)=Setup(Playback.Paused); s.Start(); s.Receive(WatchingIntent.AWAY); s.Receive(WatchingIntent.ATTENDING); Equal(0,e.Actions.Count); },
-    ["标签播放但进度不动不操作"] = () => { var(e,s)=Setup(); s.Start(); s.Receive(WatchingIntent.AWAY); e.Now=1500; s.Tick(); e.Now=3100;s.Tick();Equal(0,e.Actions.Count); },
-    ["未解释进度跳变不操作"] = () => { var(e,s)=Setup();s.Start();s.Receive(WatchingIntent.AWAY);e.Frame=e.Frame with {Position=70};e.Now=200;s.Tick();Equal(0,e.Actions.Count); },
+    ["明确播放状态无需等待进度增长"] = () => { var(e,s)=Setup();e.FreezeProgress=true;s.Start();s.Receive(WatchingIntent.AWAY);Equal(1,e.Actions.Count);e.Step(s,200);Equal(MediaPhase.Owned,s.Phase);s.Receive(WatchingIntent.ATTENDING);e.Step(s,200);Equal(2,e.Actions.Count);Equal(MediaPhase.Idle,s.Phase); },
+    ["未知媒体状态不盲目操作"] = () => { var(e,s)=Setup(Playback.Unknown);s.Start();s.Receive(WatchingIntent.AWAY);s.Receive(WatchingIntent.ATTENDING);Equal(0,e.Actions.Count);True(s.Status.Contains("不明确")); },
     ["未知期间保留归属并回看恢复"] = () => { var(e,s)=Owned();s.Receive(WatchingIntent.UNKNOWN);e.Step(s,500);Equal(MediaPhase.Owned,s.Phase);s.Receive(WatchingIntent.ATTENDING);e.Step(s,500);Equal(2,e.Actions.Count);Equal(Playback.Playing,e.Frame.State); },
     ["未知不延长暂停确认"] = () => { var(e,s)=Setup();e.Apply=false;s.Start();s.Receive(WatchingIntent.AWAY);e.Step(s,1000);s.Receive(WatchingIntent.UNKNOWN);e.Step(s,1200);e.Step(s,1200);s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count);Equal(MediaPhase.Idle,s.Phase); },
-    ["待核验期间未知不授予资格"] = () => { var(e,s)=Setup();s.Start();s.Receive(WatchingIntent.AWAY);s.Receive(WatchingIntent.UNKNOWN);e.Step(s,500);s.Receive(WatchingIntent.ATTENDING);Equal(0,e.Actions.Count); },
+    ["暂停待确认期间未知不播放且继续确认"] = () => { var(e,s)=Setup();s.Start();s.Receive(WatchingIntent.AWAY);s.Receive(WatchingIntent.UNKNOWN);Equal(1,e.Actions.Count);e.Step(s,500);Equal(MediaPhase.Owned,s.Phase);Equal(1,e.Actions.Count);s.Receive(WatchingIntent.ATTENDING);Equal(2,e.Actions.Count); },
     ["键鼠接管后回看不播放"] = () => { var(e,s)=Owned();e.Epoch++;e.Step(s,300);s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count); },
     ["切前台后回看不播放"] = () => { var(e,s)=Owned();e.Foreground=2;e.Step(s,300);s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count); },
     ["换媒体后回看不播放"] = () => { var(e,s)=Owned();e.Frame=e.Frame with {Identity="B"};e.Step(s,300);s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count); },
@@ -23,7 +23,7 @@ var checks = new Dictionary<string, Action>
     ["输入监听失效禁止恢复"] = () => { var(e,s)=Owned();e.Healthy=false;s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count); },
     ["媒体不可识别不误报输入监听故障"] = () => { var(e,s)=Setup();e.OnRead=()=>throw new MediaObservationException("未找到可识别的播放控件");s.Start();s.Receive(WatchingIntent.AWAY);True(s.Status.Contains("未找到可识别的播放控件"));True(!s.Status.Contains("输入"));Equal(0,e.Actions.Count); },
     ["输入监听失效给出明确处理提示"] = () => { var(e,s)=Setup();e.Healthy=false;s.Start();s.Receive(WatchingIntent.AWAY);True(s.Status.Contains("输入监听已失效"));Equal(0,e.Actions.Count); },
-    ["进度冻结给出媒体诊断且不操作"] = () => { var(e,s)=Setup();s.Start();s.Receive(WatchingIntent.AWAY);e.Now=1500;s.Tick();e.Now=3100;s.Tick();True(s.Status.Contains("未观察到实际播放进度"));True(!s.Status.Contains("输入"));Equal(0,e.Actions.Count); },
+    ["状态冻结未确认暂停不得获得恢复资格"] = () => { var(e,s)=Setup();e.Apply=false;e.FreezeProgress=true;s.Start();s.Receive(WatchingIntent.AWAY);e.Step(s,500);Equal(MediaPhase.Pausing,s.Phase);e.Step(s,1600);s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count);Equal(MediaPhase.Idle,s.Phase); },
     ["恢复前采样中接管禁止动作"] = () => { var(e,s)=Owned();e.OnRead=()=>e.Epoch++;s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count); },
     ["已结束禁止恢复"] = () => { var(e,s)=Owned();e.Frame=e.Frame with {Position=634};s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count); },
     ["重复回看不重复播放"] = () => { var(e,s)=Owned();s.Receive(WatchingIntent.ATTENDING);e.Step(s,500);s.Receive(WatchingIntent.ATTENDING);Equal(2,e.Actions.Count); },
@@ -39,10 +39,11 @@ var checks = new Dictionary<string, Action>
     ["最终执行准备期间撤销不操作"] = () => { var(e,s)=Owned();e.OnInvokePreparation=()=>e.Epoch++;s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count); },
     ["监听心跳中断后不能自行恢复"] = () => { var invalidations=0;var heartbeat=new InputHeartbeat(0,()=>invalidations++);True(heartbeat.Healthy(100));heartbeat.Pulse(1200);True(!heartbeat.Healthy(1200));heartbeat.Pulse(1300);True(!heartbeat.Healthy(1300));Equal(1,invalidations); },
     ["监听失效先于新心跳时间发布"] = () => { InputHeartbeat? heartbeat=null;heartbeat=new InputHeartbeat(0,()=>{Equal(0L,heartbeat!.LastPulse);True(!heartbeat.Healthy(1200));});heartbeat.Pulse(1200);Equal(1200L,heartbeat.LastPulse); },
-    ["恢复中再次侧看重新确认暂停"] = () => { var(e,s)=Owned();s.Receive(WatchingIntent.ATTENDING);s.Receive(WatchingIntent.AWAY);e.Step(s,500);Equal(MediaPhase.Checking,s.Phase);e.Step(s,1000);e.Step(s,200);Equal(3,e.Actions.Count);Equal(MediaPhase.Owned,s.Phase); },
+    ["恢复中再次侧看重新确认暂停"] = () => { var(e,s)=Owned();s.Receive(WatchingIntent.ATTENDING);s.Receive(WatchingIntent.AWAY);e.Step(s,500);Equal(MediaPhase.Pausing,s.Phase);e.Step(s,200);Equal(3,e.Actions.Count);Equal(MediaPhase.Owned,s.Phase); },
     ["普通页面公共祖先不是媒体区域"] = () => { True(!UiMedia.HasMediaSemantics("Page content group"));True(UiMedia.HasMediaSemantics("Video Player"));True(!UiMedia.HasMediaSemantics("Play controls")); },
     ["时间与媒体语义解析"] = () => { True(MediaClock.TryParse("0 Minutes 37 Seconds of 10 Minutes 34 Seconds",out var p,out var d));Equal(37d,p);Equal(634d,d);True(!MediaClock.TryParse("1:70 / 10:00",out _,out _));Equal(Playback.Unknown,UiMedia.Semantics("PausePal"));Equal(Playback.Paused,UiMedia.Semantics("Play keyboard shortcut k")); }
 };
+foreach (var check in MigrationChecks()) checks.Add(check.Key, check.Value);
 foreach (var check in ProtocolTests.Checks()) checks.Add(check.Key, check.Value);
 var passed=0;
 foreach(var(name,run) in checks)
@@ -66,6 +67,85 @@ static (FakeEnvironment,MediaSession) Owned()
 static void True(bool value) { if(!value)throw new Exception("断言不成立"); }
 static void Equal<T>(T expected,T actual) { if(!Equals(expected,actual))throw new Exception($"期望{expected}，实际{actual}"); }
 
+static Dictionary<string, Action> MigrationChecks() => new()
+{
+    ["调音量接管仅取消本轮并可建立新一轮"] = () =>
+    {
+        var(e,s)=Owned(); e.Epoch++; e.Step(s,200); True(s.Watching); Equal(MediaPhase.Idle,s.Phase);
+        s.Receive(WatchingIntent.ATTENDING); Equal(1,e.Actions.Count);
+        e.Frame=e.Frame with {State=Playback.Playing}; s.Receive(WatchingIntent.AWAY); e.Step(s,200);
+        Equal(MediaPhase.Owned,s.Phase); s.Receive(WatchingIntent.ATTENDING); e.Step(s,200); Equal(3,e.Actions.Count);
+    },
+    ["播放期间调整进度音量后下一轮正常控制"] = () =>
+    {
+        var(e,s)=Setup();s.Start();s.Receive(WatchingIntent.ATTENDING);e.Epoch++;e.Frame=e.Frame with {Position=50};
+        s.Receive(WatchingIntent.AWAY);e.Step(s,200);Equal(MediaPhase.Owned,s.Phase);
+        s.Receive(WatchingIntent.ATTENDING);e.Step(s,200);Equal(2,e.Actions.Count);True(s.Watching);
+    },
+    ["换片取消旧轮但后续无需重新开始观影"] = () =>
+    {
+        var(e,s)=Owned();e.Frame=e.Frame with {Identity="B",State=Playback.Playing,Maximum=800,Position=10};
+        e.Step(s,200);True(s.Watching);Equal(MediaPhase.Idle,s.Phase);s.Receive(WatchingIntent.ATTENDING);
+        Equal(1,e.Actions.Count);s.Receive(WatchingIntent.AWAY);e.Step(s,200);Equal(MediaPhase.Owned,s.Phase);
+        s.Receive(WatchingIntent.ATTENDING);e.Step(s,200);Equal(3,e.Actions.Count);
+    },
+    ["接管后仍手动暂停则后续回看也不播放"] = () =>
+    {
+        var(e,s)=Owned();e.Epoch++;e.Step(s,200);s.Receive(WatchingIntent.ATTENDING);
+        s.Receive(WatchingIntent.AWAY);e.Step(s,200);s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count);True(s.Watching);
+    },
+    ["缺少时间线可暂停但不授予恢复资格"] = () =>
+    {
+        var(e,s)=Setup();e.Frame=e.Frame with {Source=TimelineSource.None,Position=double.NaN,Minimum=double.NaN,Maximum=double.NaN};
+        s.Start();s.Receive(WatchingIntent.AWAY);Equal(1,e.Actions.Count);e.Step(s,200);
+        Equal(MediaPhase.Idle,s.Phase);True(s.Status.Contains("不可核验"));s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count);
+    },
+    ["暂停后首次取得时间线不混淆媒体身份"] = () =>
+    {
+        var(e,s)=Setup();var valid=e.Frame;e.Frame=valid with {Source=TimelineSource.None,Position=double.NaN,Minimum=double.NaN,Maximum=double.NaN};
+        s.Start();s.Receive(WatchingIntent.AWAY);e.Frame=valid with {State=Playback.Paused};e.Step(s,200);Equal(MediaPhase.Owned,s.Phase);
+    },
+    ["已证明结束的媒体暂停前零操作"] = () => { var(e,s)=Setup();e.Frame=e.Frame with {Position=634};s.Start();s.Receive(WatchingIntent.AWAY);Equal(0,e.Actions.Count); },
+    ["暂停锚点丢失或格式变化不继承资格"] = () =>
+    {
+        foreach(var source in new[]{TimelineSource.None,TimelineSource.Text,TimelineSource.SeekText})
+        { var(e,s)=Owned();e.Frame=e.Frame with {Source=source};e.Step(s,200);s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count); }
+    },
+    ["恢复命令无状态变化不确认成功不回退"] = () =>
+    { var(e,s)=Owned();e.Apply=false;s.Receive(WatchingIntent.ATTENDING);e.Step(s,1000);e.Step(s,1100);Equal(2,e.Actions.Count);Equal(0,e.Rewinds);Equal(MediaPhase.Idle,s.Phase); },
+    ["暂停前采样过期不能提交操作"] = () => { var(e,s)=Setup();e.OnRead=()=>e.Now+=1600;s.Start();s.Receive(WatchingIntent.AWAY);Equal(0,e.Actions.Count); },
+    ["文字秒锚点不接受位置漂移"] = () =>
+    { var(e,s)=Setup();e.Frame=e.Frame with {Source=TimelineSource.Text};s.Start();s.Receive(WatchingIntent.AWAY);e.Step(s,200);e.Frame=e.Frame with {Position=21};s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count); },
+    ["回退重读的时间范围或来源改变必须拒绝"] = () =>
+    {
+        var(e,_)=Setup();var target=e.Frame;
+        True(MediaRewind.MatchesPlayingTarget(target,target with {Position=21}));
+        True(!MediaRewind.MatchesPlayingTarget(target,target with {Maximum=800}));
+        True(!MediaRewind.MatchesPlayingTarget(target,target with {Source=TimelineSource.Text}));
+        True(!MediaRewind.MatchesPlayingTarget(target,target with {Source=TimelineSource.None}));
+    },
+    ["回退重读换目标暂停或结束必须拒绝"] = () =>
+    {
+        var(e,_)=Setup();var target=e.Frame;
+        True(!MediaRewind.MatchesPlayingTarget(target,target with {Identity="B"}));
+        True(!MediaRewind.MatchesPlayingTarget(target,target with {Window=2}));
+        True(!MediaRewind.MatchesPlayingTarget(target,target with {State=Playback.Paused}));
+        True(!MediaRewind.MatchesPlayingTarget(target,target with {Position=634}));
+    },
+    ["同一组合时间与子文字仅计一次"] = () =>
+    { var clock=MediaClock.Unique([new("group",[],20,60),new("text",["group"],20,60)]);Equal("group",clock!.Id); },
+    ["独立相同数值时钟仍有歧义"] = () => RejectClocks([new("a",[],20,60),new("b",[],20,60)]),
+    ["父子时间冲突不能去重隐藏"] = () => RejectClocks([new("group",[],20,60),new("text",["group"],21,60)]),
+    ["时间线缺失与结束分开"] = () =>
+    { var(e,_)=Setup();True(MediaClock.Unique([])==null);True(!(e.Frame with {Position=634}).BeforeEnd);True((e.Frame with {Position=634}).HasTimeline);True(!(e.Frame with {Source=TimelineSource.None}).HasTimeline); }
+};
+static void RejectClocks(ClockReading[] clocks)
+{
+    try { MediaClock.Unique(clocks); }
+    catch(MediaObservationException) { return; }
+    throw new Exception("歧义时间来源未拒绝");
+}
+
 sealed class FakeEnvironment:IMediaEnvironment
 {
     public long Now{get;set;}
@@ -74,6 +154,7 @@ sealed class FakeEnvironment:IMediaEnvironment
     public nint Foreground{get;set;}=1;
     public required UiMedia Frame{get;set;}
     public bool Apply{get;set;}=true;
+    public bool FreezeProgress{get;set;}
     public Action? OnRead{get;set;}
     public Action? OnInvokePreparation{get;set;}
     public List<Playback> Actions{get;}=[];
@@ -91,7 +172,7 @@ sealed class FakeEnvironment:IMediaEnvironment
     public void Step(MediaSession session,int milliseconds)
     {
         Now+=milliseconds;
-        if(Frame.State==Playback.Playing)Frame=Frame with {Position=Frame.Position+milliseconds/1000d};
+        if(Frame.State==Playback.Playing&&!FreezeProgress)Frame=Frame with {Position=Frame.Position+milliseconds/1000d};
         session.Tick();
     }
 }

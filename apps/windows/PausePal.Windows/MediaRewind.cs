@@ -12,13 +12,15 @@ internal static class MediaRewind
         {
             if (!Valid(target, input, epoch)) return RewindResult.Skipped;
             var fresh = UiMedia.Read();
-            if (!target.SameTarget(fresh) || fresh.State != Playback.Playing || !fresh.BeforeEnd || !Valid(fresh, input, epoch)) return RewindResult.Skipped;
-            var range = (RangeValuePattern)fresh.Timeline.GetCurrentPattern(RangeValuePattern.Pattern);
+            if (!MatchesPlayingTarget(target, fresh) || !Valid(fresh, input, epoch)) return RewindResult.Skipped;
             // 网页 ARIA 可写不证明实现了 seek；有 Document 祖先时只走已批准的固定 Left。
-            if (NativeTimeline(fresh.Timeline) && !range.Current.IsReadOnly)
+            if (fresh.Timeline != null && NativeTimeline(fresh.Timeline) &&
+                fresh.Timeline.TryGetCurrentPattern(RangeValuePattern.Pattern, out var pattern) && !((RangeValuePattern)pattern).Current.IsReadOnly)
             {
+                var range = (RangeValuePattern)pattern;
                 var value = range.Current;
-                if (!double.IsFinite(value.Value) || value.Value <= value.Minimum || value.Minimum != fresh.Minimum || value.Maximum != fresh.Maximum)
+                if (!double.IsFinite(value.Value) || value.Value <= value.Minimum || value.Minimum != fresh.Minimum || value.Maximum != fresh.Maximum ||
+                    Math.Abs(value.Value - fresh.Position) > (fresh.Rounded ? 1 : 0.05))
                     return RewindResult.Skipped;
                 if (!Valid(fresh, input, epoch)) return RewindResult.Skipped;
                 // 原生写入一旦提交，异常也不补 Left。
@@ -43,6 +45,9 @@ internal static class MediaRewind
         }
         catch { return RewindResult.Skipped; }
     }
+    internal static bool MatchesPlayingTarget(UiMedia target, UiMedia fresh) => target.SameTarget(fresh) &&
+        target.SameTimeline(fresh) && fresh.State == Playback.Playing && fresh.BeforeEnd;
+
     private static bool Valid(UiMedia media, InputWatch input, long epoch) => Program.GetForegroundWindow() == media.Window &&
         Environment.TickCount64 - media.ObservedAt <= 1500 && input.Healthy && input.Epoch == epoch;
     private static bool NativeTimeline(AutomationElement element)

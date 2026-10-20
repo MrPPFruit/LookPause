@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace PausePal.Windows;
 
 internal enum WatchingIntent { ATTENDING, AWAY, NO_FACE, UNKNOWN }
-internal enum MediaPhase { Idle, Checking, Pausing, Owned, Resuming }
+internal enum MediaPhase { Idle, Pausing, Owned, Resuming }
 
 // 只有此串行 owner 能改变媒体归属并提交固定媒体控件动作。
 internal sealed class MediaSession(IMediaEnvironment environment)
@@ -44,8 +44,6 @@ internal sealed class MediaSession(IMediaEnvironment environment)
             Pause(deliveryEpoch);
         else if (intent == WatchingIntent.ATTENDING && Phase == MediaPhase.Owned)
             Resume();
-        else if (intent == WatchingIntent.ATTENDING && Phase == MediaPhase.Checking)
-            Cancel("看向屏幕，取消待定暂停");
     }
 
     private void Pause(long? receivedEpoch = null)
@@ -56,13 +54,17 @@ internal sealed class MediaSession(IMediaEnvironment environment)
             Console.WriteLine(JsonSerializer.Serialize(new { kind = "qualification-start", epoch, input = environment.InputDiagnostics }));
             if (!environment.Healthy || environment.Epoch != epoch) throw new InvalidOperationException("暂停请求已被撤销");
             var observed = environment.Observe();
-            if (observed.State != Playback.Playing) { Cancel("视频已暂停，交由你控制"); return; }
+            TraceObservation("pause", observed);
+            if (observed.State != Playback.Playing)
+            { Cancel(observed.State == Playback.Paused ? "视频已暂停，交由你控制" : "当前媒体状态不明确，未操作"); return; }
+            if (observed.HasTimeline && !observed.BeforeEnd) throw new MediaObservationException("媒体已经结束，未操作");
             if (environment.Epoch != epoch || !environment.Healthy || !Watching || environment.Now - observed.ObservedAt > 1500)
                 throw new InvalidOperationException("暂停前采样过期或资格已变");
-            target = observed; Phase = MediaPhase.Checking;
-            deadline = environment.Now + 3000;
+            target = observed; Phase = MediaPhase.Pausing;
+            deadline = environment.Now + 2000;
             lastObservation = environment.Now;
-            SetStatus("正在核验实际播放进度");
+            environment.Invoke(observed, Playback.Playing, epoch);
+            SetStatus("正在确认暂停");
         }
         catch (Exception error) { Diagnose("pause", error); Cancel(FailureStatus(error)); }
     }
@@ -73,6 +75,7 @@ internal sealed class MediaSession(IMediaEnvironment environment)
         {
             if (!Valid() || target == null || environment.Now - lastObservation > 2000) throw new InvalidOperationException("恢复前观察不连续");
             var observed = environment.Observe();
+            TraceObservation("resume", observed);
             if (!Valid() || !target.HoldsPause(observed) || environment.Now - observed.ObservedAt > 1500 || environment.Now - lastObservation > 2000)
                 throw new InvalidOperationException("恢复前采样过期或暂停资格已变");
             Phase = MediaPhase.Resuming; deadline = environment.Now + 2000;
@@ -90,36 +93,26 @@ internal sealed class MediaSession(IMediaEnvironment environment)
             var now = environment.Now;
             if (!Valid() || now - lastObservation > 2000 || target == null) throw new InvalidOperationException("观察前资格无效");
             var observed = environment.Observe();
+            if (Phase != MediaPhase.Owned) TraceObservation("confirm", observed);
             if (!Valid() || !target.SameTarget(observed) || environment.Now - observed.ObservedAt > 1500)
             {
                 Console.WriteLine(JsonSerializer.Serialize(new { kind = "target-check", same = target.SameTarget(observed),
                     valid = Valid(), previous = target.Identity, current = observed.Identity,
-                    previousMin = target.Minimum, previousMax = target.Maximum, observed.Minimum, observed.Maximum, observed.Position, state = observed.State.ToString() }));
+                    previousMin = Number(target.Minimum), previousMax = Number(target.Maximum), minimum = Number(observed.Minimum),
+                    maximum = Number(observed.Maximum), position = Number(observed.Position), state = observed.State.ToString() }));
                 throw new InvalidOperationException("观察后资格或目标已变");
             }
+            if (target.HasTimeline && !target.SameTimeline(observed))
+                throw new MediaObservationException("时间线来源、格式或范围已改变");
             now = environment.Now;
             if (now - lastObservation > 2000) throw new InvalidOperationException("观察间隔超限");
             lastObservation = now;
-            if (Phase == MediaPhase.Checking)
-            {
-                Console.WriteLine(JsonSerializer.Serialize(new { kind = "progress-check", from = target.Position,
-                    to = observed.Position, sampleAgeMs = now - observed.ObservedAt, remainingMs = deadline - now,
-                    state = observed.State.ToString() }));
-                if (now > deadline || observed.State != Playback.Playing) throw new MediaObservationException("未观察到实际播放进度");
-                if (observed.Position > target.Position)
-                {
-                    if (observed.Position - target.Position > (now - (deadline - 3000)) / 1000.0 + 1)
-                        throw new InvalidOperationException("播放进度发生未解释跳变");
-                    target = observed; Phase = MediaPhase.Pausing; deadline = now + 2000;
-                    environment.Invoke(observed, Playback.Playing, epoch);
-                    SetStatus("正在确认暂停");
-                }
-            }
-            else if (Phase == MediaPhase.Pausing)
+            if (Phase == MediaPhase.Pausing)
             {
                 if (now > deadline) throw new InvalidOperationException("暂停确认超时");
                 if (observed.State == Playback.Paused)
                 {
+                    if (!observed.BeforeEnd) throw new MediaObservationException("暂停位置或结束状态不可核验，不能自动恢复");
                     target = observed; Phase = MediaPhase.Owned;
                     SetStatus(Intent == WatchingIntent.UNKNOWN ? "识别暂时未知，视频保持暂停" : "已自动暂停，等待回看");
                     if (Intent == WatchingIntent.ATTENDING) Resume();
@@ -132,7 +125,7 @@ internal sealed class MediaSession(IMediaEnvironment environment)
             else if (Phase == MediaPhase.Resuming)
             {
                 if (now > deadline) throw new InvalidOperationException("恢复确认超时");
-                if (observed.State == Playback.Playing && observed.Position > target.Position)
+                if (observed.State == Playback.Playing && observed.BeforeEnd)
                 {
                     var completedEpoch = epoch;
                     // 先消费本轮恢复资格；回退失败也不重新授予或补发播放。
@@ -159,11 +152,18 @@ internal sealed class MediaSession(IMediaEnvironment environment)
         sameInput = environment.Epoch == epoch, sameFront = target != null && environment.Foreground == target.Window,
         gapMs = environment.Now - lastObservation,
         reason = error is MediaObservationException || error.GetType() == typeof(InvalidOperationException) ? error.Message : error.GetType().Name }));
+    private static double? Number(double? value) => value.HasValue && double.IsFinite(value.Value) ? value : null;
+    private void TraceObservation(string stage, UiMedia observed) => Console.WriteLine(JsonSerializer.Serialize(new
+    {
+        kind = "media-observation", stage, phase = Phase.ToString(), state = observed.State.ToString(),
+        timelineSource = observed.Source.ToString(), hasTimeline = observed.HasTimeline, beforeEnd = observed.BeforeEnd,
+        position = Number(observed.Position), duration = Number(observed.Maximum), sampleAgeMs = environment.Now - observed.ObservedAt
+    }));
     private void SetStatus(string value, double? observedPosition = null)
     {
         Status = value;
         Console.WriteLine(JsonSerializer.Serialize(new { kind = "media", phase = Phase.ToString(), status = value,
-            watching = Watching, intent = Intent.ToString(), position = observedPosition ?? target?.Position }));
+            watching = Watching, intent = Intent.ToString(), position = Number(observedPosition ?? target?.Position) }));
         Changed?.Invoke(value);
     }
 }

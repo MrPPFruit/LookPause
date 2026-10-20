@@ -3,8 +3,19 @@ using System.Text.RegularExpressions;
 
 namespace PausePal.Windows;
 
+internal sealed record ClockReading(string Id, string[] Ancestors, double Position, double Duration);
+
 internal static class MediaClock
 {
+    public static ClockReading? Unique(IReadOnlyList<ClockReading> readings)
+    {
+        // 同一组合控件与其子文字可能重复暴露相同时间；独立时钟不能只因数值相等就合并。
+        var distinct = readings.Where(child => !readings.Any(parent => parent.Id != child.Id &&
+            child.Ancestors.Contains(parent.Id) && parent.Position == child.Position && parent.Duration == child.Duration)).ToArray();
+        if (distinct.Length > 1) throw new MediaObservationException("媒体时间来源有歧义，不能确认暂停归属");
+        return distinct.SingleOrDefault();
+    }
+
     public static bool TryParse(string text, out double position, out double duration)
     {
         position = duration = 0;

@@ -64,7 +64,7 @@ internal static class TestModes
                     using var menu = new Forms.ContextMenuStrip();
                     TrayApp.PopulateMenu(menu,
                         new Forms.ToolStripMenuItem("手机已连接") { Enabled = false },
-                        new Forms.ToolStripMenuItem("未观察到实际播放进度，本轮自动控制已取消") { Enabled = false },
+                        new Forms.ToolStripMenuItem("暂停位置或结束状态不可核验，不能自动恢复，本轮自动控制已取消") { Enabled = false },
                         new Forms.ToolStripMenuItem("局域网服务已注册，等待手机连接") { Enabled = false },
                         new Forms.ToolStripMenuItem("登录后启动") { Checked = true }, (_, _) => { });
                     menu.PerformLayout(); menu.CreateControl();

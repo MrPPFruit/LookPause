@@ -13,6 +13,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", choices=["normal", "stop", "disconnect", "takeover"], default="normal")
     parser.add_argument("--cycles", type=int, choices=range(1, 6), default=3)
+    parser.add_argument("--start-delay", type=int, choices=range(0, 61), default=0,
+                        help="首次控制前等待秒数，供手动切回播放器；不操作桌面焦点")
     args = parser.parse_args()
     executable = Path(__file__).resolve().parents[1] / "PausePal.Windows/bin/Release/net10.0-windows10.0.19041.0/PausePal.Windows.exe"
     process = subprocess.Popen([str(executable), "--pilot"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -46,10 +48,14 @@ def main():
                 print(json.dumps(event, ensure_ascii=False), flush=True)
             if predicate(event):
                 return event
+            if event.get("kind") == "media" and event.get("phase") == "Idle" and event.get("watching") and event.get("status") != "观影中，等待观看方向":
+                raise RuntimeError("本轮未取得资格：" + event.get("status", "未知原因"))
         raise TimeoutError("未在固定时限取得期望观察，停止测试，不补发媒体操作")
 
     try:
         wait(lambda e: e.get("kind") == "pilot-ready")
+        if args.start_delay:
+            time.sleep(args.start_delay)
         for index in range(args.cycles if args.scenario == "normal" else 1):
             send("START")
             send("AWAY")
@@ -61,9 +67,8 @@ def main():
             if args.scenario == "normal":
                 send("ATTENDING")
                 restored = wait(lambda e: e.get("phase") == "Idle" and e.get("status", "").startswith("已确认恢复播放"))
-                if restored.get("position") is None or restored["position"] <= owned["position"]:
-                    raise AssertionError("没有实际进度推进证据")
-                print(json.dumps({"步骤": "已确认恢复并推进", "轮次": index + 1, "位置": restored["position"]}, ensure_ascii=False), flush=True)
+                print(json.dumps({"步骤": "同目标播放状态已恢复", "轮次": index + 1, "位置": restored.get("position"),
+                                  "进度变化": "已观察" if restored.get("position") is not None and restored["position"] > owned["position"] else "未观察，不作为明确状态主链门槛"}, ensure_ascii=False), flush=True)
                 send("STOP")
                 wait(lambda e: e.get("status") == "已停止观影")
             else:

@@ -75,7 +75,8 @@ internal static class Program
                 Console.WriteLine(JsonSerializer.Serialize(new { kind = "gsmtc", source = session.SourceAppUserModelId,
                     status = info.PlaybackStatus.ToString(), pause = info.Controls.IsPauseEnabled,
                     play = info.Controls.IsPlayEnabled, seek = info.Controls.IsPlaybackPositionEnabled,
-                    position = timeline.Position.TotalSeconds, duration = timeline.EndTime.TotalSeconds }));
+                    position = timeline.Position.TotalSeconds, duration = timeline.EndTime.TotalSeconds,
+                    updatedAt = timeline.LastUpdatedTime, rate = info.PlaybackRate }));
             }
         }
         catch (Exception error) { Console.WriteLine(JsonSerializer.Serialize(new { kind = "gsmtc-error", error = error.GetType().Name, code = error.HResult })); }
@@ -107,6 +108,8 @@ internal static class Program
                     ((c.ControlType == ControlType.Button || c.ControlType == ControlType.Text) && (playback || clock)))
                 {
                     object? value = null;
+                    object? clockValue = MediaClock.TryParse(c.Name, out var clockPosition, out var clockDuration)
+                        ? new { position = clockPosition, duration = clockDuration } : null;
                     if (node.TryGetCurrentPattern(RangeValuePattern.Pattern, out var range))
                     {
                         var r = ((RangeValuePattern)range).Current;
@@ -120,7 +123,7 @@ internal static class Program
                         semantic = playback ? (UiMedia.Semantics(c.Name) == Playback.Playing ? "PAUSE" : "PLAY") : clock ? "TIME" : "OTHER",
                         context = c.ControlType == ControlType.Document ? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(c.Name))) : null,
                         id, document, parent, offscreen = c.IsOffscreen, enabled = c.IsEnabled,
-                        invoke = node.TryGetCurrentPattern(InvokePattern.Pattern, out _), value }));
+                        invoke = node.TryGetCurrentPattern(InvokePattern.Pattern, out _), value, clockValue }));
                 }
                 // 有界逐节点读取，不先通过 FindAll 拉取整个应用树。
                 if (depth < 35)

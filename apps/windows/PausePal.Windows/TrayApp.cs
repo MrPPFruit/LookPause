@@ -92,7 +92,7 @@ internal sealed class TrayApp : Forms.ApplicationContext
             Console.SetOut(log);
             try
             {
-                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { kind = "startup", version = "0.1.0", windows = Environment.OSVersion.VersionString, runtime = Environment.Version.ToString() }));
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { kind = "startup", version = typeof(Program).Assembly.GetName().Version?.ToString(), windows = Environment.OSVersion.VersionString, runtime = Environment.Version.ToString() }));
                 using var identity = IdentityStore.Load();
                 using var app = new TrayApp(identity);
                 Forms.Application.Run(app);

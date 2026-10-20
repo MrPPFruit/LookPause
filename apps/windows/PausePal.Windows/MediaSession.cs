@@ -53,6 +53,7 @@ internal sealed class MediaSession(IMediaEnvironment environment)
         try
         {
             epoch = receivedEpoch ?? environment.Epoch;
+            Console.WriteLine(JsonSerializer.Serialize(new { kind = "qualification-start", epoch, input = environment.InputDiagnostics }));
             if (!environment.Healthy || environment.Epoch != epoch) throw new InvalidOperationException("暂停请求已被撤销");
             var observed = environment.Observe();
             if (observed.State != Playback.Playing) { Cancel("视频已暂停，交由你控制"); return; }
@@ -63,7 +64,7 @@ internal sealed class MediaSession(IMediaEnvironment environment)
             lastObservation = environment.Now;
             SetStatus("正在核验实际播放进度");
         }
-        catch (Exception error) { Diagnose("pause", error); Cancel("当前媒体或输入监测不合格，未取得恢复资格"); }
+        catch (Exception error) { Diagnose("pause", error); Cancel(FailureStatus(error)); }
     }
 
     private void Resume()
@@ -104,7 +105,7 @@ internal sealed class MediaSession(IMediaEnvironment environment)
                 Console.WriteLine(JsonSerializer.Serialize(new { kind = "progress-check", from = target.Position,
                     to = observed.Position, sampleAgeMs = now - observed.ObservedAt, remainingMs = deadline - now,
                     state = observed.State.ToString() }));
-                if (now > deadline || observed.State != Playback.Playing) throw new InvalidOperationException("未确认实际播放进度");
+                if (now > deadline || observed.State != Playback.Playing) throw new MediaObservationException("未观察到实际播放进度");
                 if (observed.Position > target.Position)
                 {
                     if (observed.Position - target.Position > (now - (deadline - 3000)) / 1000.0 + 1)
@@ -143,18 +144,21 @@ internal sealed class MediaSession(IMediaEnvironment environment)
                 }
             }
         }
-        catch (Exception error) { Diagnose("tick", error); Cancel("前台、输入、媒体或观察已改变，恢复资格取消"); }
+        catch (Exception error) { Diagnose("tick", error); Cancel(FailureStatus(error)); }
     }
 
     private bool Valid() => Watching && environment.Healthy && environment.Epoch == epoch && target != null &&
         environment.Foreground == target.Window;
+    private string FailureStatus(Exception error) => !environment.Healthy ? "输入监听已失效，请退出并重新打开 PausePal" :
+        environment.Epoch != epoch ? "检测到输入或连接变化，恢复资格已取消" :
+        error is MediaObservationException ? error.Message + "，本轮自动控制已取消" : "媒体或观察资格已改变，本轮自动控制已取消";
     private void Clear() { target = null; Phase = MediaPhase.Idle; }
     private void Cancel(string reason, double? observedPosition = null) { Clear(); SetStatus(reason, observedPosition); }
     private void Diagnose(string stage, Exception error) => Console.WriteLine(JsonSerializer.Serialize(new {
-        kind = "qualification-failure", stage, phase = Phase.ToString(), healthy = environment.Healthy,
+        kind = "qualification-failure", stage, phase = Phase.ToString(), healthy = environment.Healthy, input = environment.InputDiagnostics,
         sameInput = environment.Epoch == epoch, sameFront = target != null && environment.Foreground == target.Window,
         gapMs = environment.Now - lastObservation,
-        reason = error.GetType() == typeof(InvalidOperationException) ? error.Message : error.GetType().Name }));
+        reason = error is MediaObservationException || error.GetType() == typeof(InvalidOperationException) ? error.Message : error.GetType().Name }));
     private void SetStatus(string value, double? observedPosition = null)
     {
         Status = value;

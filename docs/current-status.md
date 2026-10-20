@@ -1,6 +1,8 @@
 # 当前状态、上传范围与剩余收尾
 
-核对日期：2026-10-19。本页是交接快照，现行行为仍以product-spec、decision-log、protocol/CONTRACT及活动change为准；历史报告不覆盖后续决定。
+核对日期：2026-10-20。本页是交接快照，现行行为仍以product-spec、decision-log、protocol/CONTRACT及活动change为准；历史报告不覆盖后续决定。
+
+2026-10-20 Windows 用户 YouTube 实测失败已复现：输入监测健康，但 UIA 的进度条和时间文字在多次完整采样中冻结，另有播放控件不可识别的历史失败。0.1.1 仅纠正含糊提示、增加固定类别诊断，57 项回归通过；焦点和属性订阅实验没有解决，已撤回。**真实媒体暂停／恢复仍未通过**，不是需要用户再授予输入权限。现有无扩展约定保持，改变观察路径前需核对方案及授权，详见[故障报告](comet/reports/2026-10-20-windows-youtube-failure.md)。
 
 ## GitHub与版本
 

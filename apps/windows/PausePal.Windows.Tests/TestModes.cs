@@ -49,7 +49,7 @@ internal static class TestModes
                 dialog.Close();
                 foreach (var theme in new[] { "light", "dark" })
                 {
-                    using var canvas = new Bitmap(760, 530);
+                    using var canvas = new Bitmap(1000, 530);
                     using var graphics = Graphics.FromImage(canvas);
                     graphics.Clear(theme == "light" ? Color.White : Color.FromArgb(32, 32, 32));
                     using var font = new Font("Microsoft YaHei UI", 10);
@@ -64,7 +64,7 @@ internal static class TestModes
                     using var menu = new Forms.ContextMenuStrip();
                     TrayApp.PopulateMenu(menu,
                         new Forms.ToolStripMenuItem("手机已连接") { Enabled = false },
-                        new Forms.ToolStripMenuItem("识别暂时未知，视频保持暂停") { Enabled = false },
+                        new Forms.ToolStripMenuItem("未观察到实际播放进度，本轮自动控制已取消") { Enabled = false },
                         new Forms.ToolStripMenuItem("局域网服务已注册，等待手机连接") { Enabled = false },
                         new Forms.ToolStripMenuItem("登录后启动") { Checked = true }, (_, _) => { });
                     menu.PerformLayout(); menu.CreateControl();

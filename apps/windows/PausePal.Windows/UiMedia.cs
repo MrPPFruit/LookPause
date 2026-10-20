@@ -35,7 +35,7 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
     public static UiMedia Read()
     {
         var window = Program.GetForegroundWindow();
-        if (window == 0) throw new InvalidOperationException("没有可核验前台");
+        if (window == 0) throw new MediaObservationException("没有可核验前台");
         Program.GetWindowThreadProcessId(window, out var processId);
         var observedAt = Environment.TickCount64;
         var timer = Stopwatch.StartNew();
@@ -54,10 +54,10 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
             new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
             new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Slider),
             new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document)));
-        if (relevant.Count > 500 || timer.ElapsedMilliseconds > 1500) throw new InvalidOperationException("媒体控件查询不完整或超时");
+        if (relevant.Count > 500 || timer.ElapsedMilliseconds > 1500) throw new MediaObservationException("媒体控件查询不完整或超时");
         foreach (AutomationElement node in relevant)
         {
-            if (timer.ElapsedMilliseconds > 1500) throw new InvalidOperationException("媒体控件读取超时");
+            if (timer.ElapsedMilliseconds > 1500) throw new MediaObservationException("媒体控件读取超时");
             var current = node.Cached;
             if (current.IsOffscreen || !current.IsEnabled || current.BoundingRectangle.IsEmpty) continue;
             if (current.ControlType == ControlType.Button && Semantics(current.Name) == Playback.Unknown &&
@@ -69,7 +69,7 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
             var ancestor = walker.GetParent(node, cache);
             while (ancestor != null)
             {
-                if (parents.Count >= 35 || timer.ElapsedMilliseconds > 1500) throw new InvalidOperationException("媒体祖先观察不完整");
+                if (parents.Count >= 35 || timer.ElapsedMilliseconds > 1500) throw new MediaObservationException("媒体祖先观察不完整");
                 var ancestorId = string.Join(".", (int[])ancestor.GetCachedPropertyValue(AutomationElement.RuntimeIdProperty));
                 parents.Add(ancestorId);
                 if (ancestor.Cached.ControlType == ControlType.Group || ancestor.Cached.ControlType == ControlType.Pane)
@@ -78,29 +78,35 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
                 if (ancestorId == rootId) break;
                 ancestor = walker.GetParent(ancestor, cache);
             }
-            if (parents.LastOrDefault() != rootId) throw new InvalidOperationException("媒体不再属于当前前台");
+            if (parents.LastOrDefault() != rootId) throw new MediaObservationException("媒体不再属于当前前台");
             parents.Reverse();
             items.Add(new Item(node, id, document, [.. parents], current.ControlType, current.Name, true, true));
         }
         if (timer.ElapsedMilliseconds > 1500 || Program.GetForegroundWindow() != window)
-            throw new InvalidOperationException("前台观察已过期");
+            throw new MediaObservationException("前台观察已过期");
         var documents = items.Where(x => x.Visible && x.Type == ControlType.Document).ToArray();
-        if (documents.Length > 1) throw new InvalidOperationException("前台内容有歧义");
+        if (documents.Length > 1) throw new MediaObservationException("前台内容有歧义");
         var controls = items.Where(x => x.Visible && x.Enabled && x.Type == ControlType.Button &&
             Semantics(x.Name) != Playback.Unknown && x.Element.TryGetCurrentPattern(InvokePattern.Pattern, out _)).ToArray();
-        if (controls.Length != 1) throw new InvalidOperationException("媒体控制不唯一或不可识别");
+        if (controls.Length != 1)
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { kind = "media-candidates", documents = documents.Length,
+                matchingButtons = items.Count(x => x.Type == ControlType.Button && Semantics(x.Name) != Playback.Unknown),
+                invokableButtons = controls.Length, relevantNodes = relevant.Count, elapsedMs = timer.ElapsedMilliseconds }));
+            throw new MediaObservationException(controls.Length == 0 ? "未找到可识别的播放控件" : "存在多个播放控件，无法确定目标");
+        }
         var control = controls[0];
         var scope = control.Parents.Reverse().FirstOrDefault(id => id != control.Document && id != rootId &&
             regions.TryGetValue(id, out var label) && HasMediaSemantics(label));
-        if (scope == null) throw new InvalidOperationException("缺少明确的媒体语义区域");
+        if (scope == null) throw new MediaObservationException("缺少明确的媒体语义区域");
         var seekers = items.Where(x => x.Visible && x.Enabled && x.Document == control.Document && x.Type == ControlType.Slider &&
             x.Parents.Contains(scope) &&
             IsSeek(x.Name) &&
             x.Element.TryGetCurrentPattern(RangeValuePattern.Pattern, out _)).ToArray();
-        if (seekers.Length != 1) throw new InvalidOperationException("没有唯一且范围明确的媒体时间线");
+        if (seekers.Length != 1) throw new MediaObservationException("没有唯一且范围明确的媒体时间线");
         var seek = seekers[0];
         // 当前没有原生播放器的稳定播放项身份时，不用窗口标题替代它。
-        if (control.Document == null) throw new InvalidOperationException("原生媒体播放项身份尚不可核验");
+        if (control.Document == null) throw new MediaObservationException("原生媒体播放项身份尚不可核验");
         var context = documents.Single(x => x.Id == control.Document);
         var contextValue = context.Element.TryGetCurrentPattern(ValuePattern.Pattern, out var value) ? ((ValuePattern)value).Current.Value : "";
         var identity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
@@ -111,13 +117,13 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
         if (clocks.Length != 1 || !MediaClock.TryParse(clocks[0].Name, out var clockPosition, out var clockDuration) ||
             Math.Abs(range.Maximum - clockDuration) > 1 || Math.Abs(range.Minimum) > 0.001 ||
             Math.Abs(range.Value - clockPosition) > 1)
-            throw new InvalidOperationException("时间线秒单位或范围未得到独立语义核验");
+            throw new MediaObservationException("时间线秒单位或范围未得到独立语义核验");
         var result = new UiMedia(window, processId, identity, control.Element, seek.Element, Semantics(control.Name),
             range.Value, range.Minimum, range.Maximum, observedAt);
-        if (!result.BeforeEnd) throw new InvalidOperationException("时间线无效或媒体已经结束");
+        if (!result.BeforeEnd) throw new MediaObservationException("时间线无效或媒体已经结束");
         Program.GetWindowThreadProcessId(Program.GetForegroundWindow(), out var finalProcess);
         if (timer.ElapsedMilliseconds > 1500 || Program.GetForegroundWindow() != window || finalProcess != processId)
-            throw new InvalidOperationException("完整媒体采样已过期");
+            throw new MediaObservationException("完整媒体采样已过期");
         return result;
     }
 

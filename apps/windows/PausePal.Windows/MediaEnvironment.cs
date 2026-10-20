@@ -5,6 +5,7 @@ internal interface IMediaEnvironment : IRevocation
 {
     long Now { get; }
     bool Healthy { get; }
+    object? InputDiagnostics => null;
     nint Foreground { get; }
     UiMedia Observe();
     void Invoke(UiMedia media, Playback expected, long epoch);
@@ -19,8 +20,11 @@ internal sealed class WindowsMediaEnvironment(InputWatch input) : IMediaEnvironm
     public long Epoch => input.Epoch;
     public void Revoke() => input.Revoke();
     public bool Healthy => input.Healthy;
+    public object InputDiagnostics => input.Diagnostics;
     public nint Foreground => Program.GetForegroundWindow();
     public UiMedia Observe() => UiMedia.Read();
     public void Invoke(UiMedia media, Playback expected, long epoch) => media.Invoke(expected, input, epoch);
     public RewindResult Rewind(UiMedia media, long epoch) => MediaRewind.Try(media, input, epoch);
 }
+
+internal sealed class MediaObservationException(string message) : InvalidOperationException(message);

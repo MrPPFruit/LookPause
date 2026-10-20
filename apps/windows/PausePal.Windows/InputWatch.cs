@@ -17,33 +17,51 @@ internal sealed class InputWatch : IDisposable, IRevocation
     private readonly nint windowHook;
     private readonly System.Windows.Forms.Timer pump;
     private long epoch;
+    private long keyboardEvents, mouseEvents, foregroundEvents, externalRevocations, heartbeatFailures;
+    private long sameForegroundEvents, differentForegroundEvents, injectedKeyboardEvents, injectedMouseEvents;
+    private nint lastForeground = Program.GetForegroundWindow();
     private int disposed;
     private readonly InputHeartbeat heartbeat;
     public long Epoch => Interlocked.Read(ref epoch);
     public bool Healthy => Volatile.Read(ref disposed) == 0 && keyboardHook != 0 && mouseHook != 0 && windowHook != 0 &&
                            heartbeat.Healthy(Environment.TickCount64);
-    public void Revoke() => Interlocked.Increment(ref epoch);
+    public void Revoke() { Interlocked.Increment(ref externalRevocations); Interlocked.Increment(ref epoch); }
+    internal object Diagnostics => new { keyboard = Interlocked.Read(ref keyboardEvents), mouse = Interlocked.Read(ref mouseEvents),
+        foreground = Interlocked.Read(ref foregroundEvents), external = Interlocked.Read(ref externalRevocations),
+        sameForeground = Interlocked.Read(ref sameForegroundEvents), differentForeground = Interlocked.Read(ref differentForegroundEvents),
+        injectedKeyboard = Interlocked.Read(ref injectedKeyboardEvents), injectedMouse = Interlocked.Read(ref injectedMouseEvents),
+        heartbeatFailures = Interlocked.Read(ref heartbeatFailures), heartbeatAgeMs = Environment.TickCount64 - heartbeat.LastPulse,
+        keyboardInstalled = keyboardHook != 0, mouseInstalled = mouseHook != 0, foregroundInstalled = windowHook != 0 };
 
     public InputWatch()
     {
-        heartbeat = new InputHeartbeat(Environment.TickCount64, Revoke);
+        heartbeat = new InputHeartbeat(Environment.TickCount64, () => { Interlocked.Increment(ref heartbeatFailures); Interlocked.Increment(ref epoch); });
         keyboard = (code, message, data) =>
         {
             if (code >= 0)
             {
                 var item = Marshal.PtrToStructure<KeyboardEvent>(data);
                 // 只排除本进程带随机标记的一次 Left；不忽略其他注入事件。
-                if (!(item.Key == 0x25 && (item.Flags & 0x10) != 0 && item.Extra == OwnRewindTag)) Interlocked.Increment(ref epoch);
+                if (!(item.Key == 0x25 && (item.Flags & 0x10) != 0 && item.Extra == OwnRewindTag))
+                { if ((item.Flags & 0x10) != 0) Interlocked.Increment(ref injectedKeyboardEvents);
+                    Interlocked.Increment(ref keyboardEvents); Interlocked.Increment(ref epoch); }
             }
             return CallNextHookEx(0, code, message, data);
         };
         mouse = (code, message, data) =>
         {
             // 纯移动不撤销；所有来源的点击、滚轮和按键都撤销。
-            if (code >= 0 && message != 0x0200) Interlocked.Increment(ref epoch);
+            if (code >= 0 && message != 0x0200)
+            { if ((Marshal.ReadInt32(data, 12) & 1) != 0) Interlocked.Increment(ref injectedMouseEvents);
+                Interlocked.Increment(ref mouseEvents); Interlocked.Increment(ref epoch); }
             return CallNextHookEx(0, code, message, data);
         };
-        foreground = (hook, kind, window, obj, child, thread, time) => Interlocked.Increment(ref epoch);
+        foreground = (hook, kind, window, obj, child, thread, time) =>
+        {
+            if (Interlocked.Exchange(ref lastForeground, window) == window) Interlocked.Increment(ref sameForegroundEvents);
+            else Interlocked.Increment(ref differentForegroundEvents);
+            Interlocked.Increment(ref foregroundEvents); Interlocked.Increment(ref epoch);
+        };
         keyboardHook = SetWindowsHookEx(13, keyboard, GetModuleHandle(null), 0);
         mouseHook = SetWindowsHookEx(14, mouse, GetModuleHandle(null), 0);
         windowHook = SetWinEventHook(3, 3, 0, foreground, 0, 0, 0);

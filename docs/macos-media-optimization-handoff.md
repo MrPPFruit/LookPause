@@ -17,6 +17,7 @@ git show origin/codex/windows-receiver:docs/media-control-policy.md
 git show origin/codex/windows-receiver:tests/media-policy/cases.json
 git show origin/codex/windows-receiver:docs/comet/reports/2026-10-21-windows-unnamed-media.md
 git show origin/codex/windows-receiver:docs/comet/reports/2026-10-21-windows-native-description.md
+git show origin/codex/windows-receiver:docs/comet/reports/2026-10-21-windows-rewind-focus.md
 ```
 
 遵循本机 AGENTS、现行 decision-log 和现有 Mac 活动变更；先审查方案，再实施。以上文档／用例可选择性集成到 Mac 开发分支，先比较本机已有版本，不整分支覆盖 Mac 或 Android。Windows 的运行产物、日志、配对身份和系统权限均不能迁移为 Mac 证据。
@@ -36,6 +37,8 @@ Windows 0.1.4后续定位到原生时间的漏读：Chromium把当前时间与�
 也不要把“暂停位置锚点”机械等同于“秒时间线”：概念上前者可以使用其他度量，但泛化RangeValue会丢失时长变化线索，且默认范围／直播窗口不证明媒体结束。Windows已独立评审这个候选，没有作为等价简化实施。若Mac研究该方向，须补具体能力合同及独立媒体身份／结束证据，不能仅用数值相等取消现有保护。
 
 ## 交付要求
+
+Windows 0.1.5另确认回退的焦点差异：播放按钮不适合该样本的Left；进度滑块虽能回退却改变Space语义，最终仅将已验证scope作为可聚焦候选，在原预算内等待exact焦点、重验Playing再发一次Left。原网站三轮及随后Space／左右键通过，详见[回退报告](comet/reports/2026-10-21-windows-rewind-focus.md)。Mac已有目标进程投递与回退观察，不能直接照搬Windows实现；应分别核对AX目标、焦点异步完成、实际步长及回退后的空格／方向键交互。不要把“键已提交”当作实际回退，也不要发键后立即恢复焦点而改变尚未处理的事件路由。
 
 接入共用合成用例的 Mac 适配测试，并在 Mac 真实 Chrome 上验证原生视频、已有 YouTube／B站回归、嵌套文档、接管与新轮、初始暂停、结束和停止／断线。仅构建或用例通过时继续保留真实验收 GAP。手机沿用 S25 已安装应用，不因桌面优化重签覆盖。
 

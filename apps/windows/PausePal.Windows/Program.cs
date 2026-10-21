@@ -131,7 +131,7 @@ internal static class Program
                         helpClock = MediaClock.TryParse(c.HelpText, out var helpPosition, out var helpDuration)
                             ? new { position = helpPosition, duration = helpDuration } : null,
                         context = c.ControlType == ControlType.Document ? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(c.Name))) : null,
-                        id, document, parent, offscreen = c.IsOffscreen, enabled = c.IsEnabled,
+                        id, document, parent, offscreen = c.IsOffscreen, enabled = c.IsEnabled, keyboardFocusable = c.IsKeyboardFocusable,
                         invoke = node.TryGetCurrentPattern(InvokePattern.Pattern, out _), value, clockValue }));
                     if (c.ControlType == ControlType.Slider && MediaCluster.IsSeek(c.Name))
                     {

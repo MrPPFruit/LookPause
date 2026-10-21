@@ -2,7 +2,7 @@
 
 原名 LookPause；2026-10-18 用户确认仅更改显示名称。安装/配对身份、服务标识和工程路径保持，以兼容已有设备。
 
-2026-10-21 桌面媒体优化：Windows 0.1.4在无名控件组及顶层身份修正基础上，补读原生总时长并识别收起音量条。100项自动回归通过，真实原生视频在控制栏可访问条件下连续3轮通过；隐藏控件及暂停后描述变化仍有失败，用户网站完整链未通过，见[原生媒体报告](docs/comet/reports/2026-10-21-windows-native-description.md)。[共用规则](docs/media-control-policy.md)、[合成用例](tests/media-policy/cases.json)、[Mac接续说明](docs/macos-media-optimization-handoff.md)已提供，Mac实施与实测须在Mac独立完成。
+2026-10-21 桌面媒体优化：Windows 0.1.5补齐媒体键盘承载面与异步焦点确认，108项自动回归通过，用户网站本机pilot三轮恢复／回退及随后Space／方向键通过。网页仍是播放器的一次Left，不保证五秒；隐藏控件、时间一致性、其他播放器及S25完整矩阵保持开放，见[回退报告](docs/comet/reports/2026-10-21-windows-rewind-focus.md)。[共用规则](docs/media-control-policy.md)、[合成用例](tests/media-policy/cases.json)、[Mac接续说明](docs/macos-media-optimization-handoff.md)已提供，Mac实施与实测须在Mac独立完成。
 
 **Windows接续入口**：[当前状态及未收尾项](docs/current-status.md) → [Windows开发交接](docs/windows-handoff.md)。跨端完整基线在`codex/experience-integration`，`main`仍为早期基线；Windows实现位于`codex/windows-receiver`。现已有协议接收端、独立身份、原生发现、四态托盘、自启和恢复后一次回退的迁移测试版，54项自动化及本机TLS/DPAPI/原生发现通过；真实媒体与S25集中验收仍待用户。启动与步骤见[Windows验收说明](apps/windows/验收说明.md)，分层证据及边界见[迁移报告](docs/comet/reports/2026-10-19-windows-migration.md)。
 

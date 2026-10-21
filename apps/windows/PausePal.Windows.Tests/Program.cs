@@ -47,6 +47,7 @@ foreach (var check in MigrationChecks()) checks.Add(check.Key, check.Value);
 foreach (var check in ClusterChecks()) checks.Add(check.Key, check.Value);
 foreach (var check in MediaPolicyTests.Checks()) checks.Add(check.Key, check.Value);
 foreach (var check in ForegroundChecks()) checks.Add(check.Key, check.Value);
+foreach (var check in RewindFocusChecks()) checks.Add(check.Key, check.Value);
 foreach (var check in ProtocolTests.Checks()) checks.Add(check.Key, check.Value);
 var passed=0;
 foreach(var(name,run) in checks)
@@ -69,6 +70,26 @@ static (FakeEnvironment,MediaSession) Owned()
 }
 static void True(bool value) { if(!value)throw new Exception("断言不成立"); }
 static void Equal<T>(T expected,T actual) { if(!Equals(expected,actual))throw new Exception($"期望{expected}，实际{actual}"); }
+
+static Dictionary<string, Action> RewindFocusChecks() => new()
+{
+    ["回退焦点已就绪不增加固定等待"] = () =>
+    { True(MediaRewind.WaitUntilReady(()=>true,()=>true,()=>throw new Exception("不应等待"))); },
+    ["回退等待异步焦点条件而非固定睡眠"] = () =>
+    { var turn=0;True(MediaRewind.WaitUntilReady(()=>turn<5,()=>turn==2,()=>turn++));Equal(2,turn); },
+    ["回退资格初始无效不读取或等待焦点"] = () =>
+    { True(!MediaRewind.WaitUntilReady(()=>false,()=>throw new Exception("不应读取"),()=>throw new Exception("不应等待"))); },
+    ["回退等待时撤销即使焦点随后到达仍拒绝"] = () =>
+    { var valid=true;var ready=false;True(!MediaRewind.WaitUntilReady(()=>valid,()=>ready,()=>{valid=false;ready=true;})); },
+    ["回退焦点读取中资格失效不得因ready为真而通过"] = () =>
+    { var valid=true;True(!MediaRewind.WaitUntilReady(()=>valid,()=>{valid=false;return true;},()=>throw new Exception("不应等待"))); },
+    ["回退焦点读取耗尽原采样预算时拒绝"] = () =>
+    { var age=1400;True(!MediaRewind.WaitUntilReady(()=>age<=1500,()=>{age=1600;return true;},()=>throw new Exception("不应等待"))); },
+    ["回退焦点不达成时沿原预算结束"] = () =>
+    { var age=1400;True(!MediaRewind.WaitUntilReady(()=>age<=1500,()=>false,()=>age+=20));Equal(1520,age); },
+    ["回退焦点读取异常立即终止不继续等待"] = () =>
+    { var yielded=false;try{MediaRewind.WaitUntilReady(()=>true,()=>throw new InvalidOperationException(),()=>yielded=true);}catch(InvalidOperationException){True(!yielded);return;}throw new Exception("异常未向执行边界传递"); }
+};
 
 static Dictionary<string, Action> MigrationChecks() => new()
 {

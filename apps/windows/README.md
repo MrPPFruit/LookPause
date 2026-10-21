@@ -2,7 +2,7 @@
 
 已有 C# 媒体资格核心、兼容现有手机协议的 TLS 接收端、独立 DPAPI 身份、原生局域网发现、四态托盘、登录启动和恢复后一次回退。当前分支为 `codex/windows-receiver`，来自 integration@c030577。54 项自动化、本机真实 TLS/DPAPI 和原生发现注册/反注册通过；真实媒体、普通托盘与 S25 集中验收尚未通过。最新事实见[迁移报告](../../docs/comet/reports/2026-10-19-windows-migration.md)，用户步骤见[集中验收说明](验收说明.md)。
 
-当前独立包为0.1.4，双击 `.local/windows-0.1.4/PausePal.Windows.exe` 启动托盘；先退出旧版本，不要并行启动。首次运行自动生成本机身份、自启默认开启，配对需要用户点一次允许。无需导入 Mac 凭据或重装 S25 APK。本机有 .NET 10 Desktop Runtime，测试包为框架依赖分发，必须保留整个输出目录。更新保留当前用户的身份文件，不要删除来绕过认证问题。
+当前独立包为0.1.5，双击 `.local/windows-0.1.5/PausePal.Windows.exe` 启动托盘；先退出旧版本，不要并行启动。首次运行自动生成本机身份、自启默认开启，配对需要用户点一次允许。无需导入 Mac 凭据或重装 S25 APK。本机有 .NET 10 Desktop Runtime，测试包为框架依赖分发，必须保留整个输出目录。更新保留当前用户的身份文件，不要删除来绕过认证问题。
 
 在 Windows/.NET SDK 10 下构建：
 
@@ -23,7 +23,7 @@ dotnet run --project apps/windows/PausePal.Windows.Tests -c Release
 
 可选 `--native-discovery` 测试真实原生注册/反注册，不表示手机已发现；`--ui-preview <目录>` 渲染实际 WinForms 控件和图标，用于离屏布局审查，不表示系统托盘主题/DPI已通过。模式参数用 `dotnet run ... --no-build -- --native-discovery` 传递。
 
-`tools/qualify-media.py` 驱动本机资格入口，可测试连续轮次或撤销场景；它会实际影响当前合格媒体，只能在隔离测试窗口中使用。脚本超时不会补发媒体操作。0.1.4在控制栏可访问的真实原生样片上取得一次连续三轮，隐藏控件及暂停后描述变化仍有失败；用户网站、YouTube和S25未完成集中验收，见[后续报告](../../docs/comet/reports/2026-10-21-windows-native-description.md)。样片生成器 `tools/create-test-video.py` 需 Pillow，仅用于本机测试，不上传生成媒体。
+`tools/qualify-media.py` 驱动本机资格入口，可测试连续轮次或撤销场景；它会实际影响当前合格媒体，只能在隔离测试窗口中使用。脚本超时不会补发媒体操作。0.1.5已在用户网站验证三轮恢复／回退及随后Space／方向键，108项自动回归通过。隐藏控件、暂停后描述变化、YouTube及S25矩阵仍开放，见[回退报告](../../docs/comet/reports/2026-10-21-windows-rewind-focus.md)。样片生成器 `tools/create-test-video.py` 需 Pillow，仅用于本机测试，不上传生成媒体。
 
 从`codex/experience-integration`开始，依次阅读：
 

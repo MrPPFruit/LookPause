@@ -12,6 +12,7 @@ internal enum TimelineSource { None, Text, SeekText, SeekDescription, Numeric }
 internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, AutomationElement Control,
     AutomationElement? Timeline, Playback State, double Position, double Minimum, double Maximum, long ObservedAt = 0)
 {
+    public AutomationElement? KeyboardSurface { get; init; }
     public TimelineSource Source { get; init; } = TimelineSource.Numeric;
     public bool Rounded => Source is TimelineSource.Text or TimelineSource.SeekText or TimelineSource.SeekDescription;
     public bool HasTimeline => Source != TimelineSource.None && double.IsFinite(Position) && double.IsFinite(Minimum) &&
@@ -143,7 +144,8 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
         }
         // 无单位 RangeValue 不当作秒；时间缺失与结束分开，缺失不能获得恢复资格。
         var result = new UiMedia(window, processId, identity, control.Element, seek?.Element, Semantics(control.Name),
-            clock?.Position ?? double.NaN, clock == null ? double.NaN : 0, clock?.Duration ?? double.NaN, observedAt) { Source = source };
+            clock?.Position ?? double.NaN, clock == null ? double.NaN : 0, clock?.Duration ?? double.NaN, observedAt)
+            { Source = source, KeyboardSurface = regions[scope].Element };
         if (result.HasTimeline && !result.BeforeEnd) throw new MediaObservationException("媒体已经结束，未操作");
         Program.GetWindowThreadProcessId(Program.GetForegroundWindow(), out var finalProcess);
         if (timer.ElapsedMilliseconds > 1500 || Program.GetForegroundWindow() != window || finalProcess != processId)

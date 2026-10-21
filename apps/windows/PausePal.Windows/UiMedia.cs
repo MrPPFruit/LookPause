@@ -69,7 +69,7 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
             if (current.IsOffscreen || !current.IsEnabled || current.BoundingRectangle.IsEmpty) continue;
             if (current.ControlType == ControlType.Button && Semantics(current.Name) == Playback.Unknown &&
                 !MediaClock.TryParse(current.Name, out _, out _)) continue;
-            if (current.ControlType == ControlType.Slider && !IsSeek(current.Name)) continue;
+            if (current.ControlType == ControlType.Slider && !MediaCluster.IsSeek(current.Name)) continue;
             var id = string.Join(".", (int[])node.GetCachedPropertyValue(AutomationElement.RuntimeIdProperty));
             string? document = current.ControlType == ControlType.Document ? id : null;
             var parents = new List<string>();
@@ -92,7 +92,6 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
         if (timer.ElapsedMilliseconds > 1500 || Program.GetForegroundWindow() != window)
             throw new MediaObservationException("前台观察已过期");
         var documents = items.Where(x => x.Visible && x.Type == ControlType.Document).ToArray();
-        if (documents.Length > 1) throw new MediaObservationException("前台内容有歧义");
         var controls = items.Where(x => x.Visible && x.Enabled && x.Type == ControlType.Button &&
             Semantics(x.Name) != Playback.Unknown && x.Element.TryGetCurrentPattern(InvokePattern.Pattern, out _)).ToArray();
         if (controls.Length != 1)
@@ -103,21 +102,31 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
             throw new MediaObservationException(controls.Length == 0 ? "未找到可识别的播放控件" : "存在多个播放控件，无法确定目标");
         }
         var control = controls[0];
-        var scope = control.Parents.Reverse().FirstOrDefault(id => id != control.Document && id != rootId &&
+        if (control.Document == null) throw new MediaObservationException("原生媒体播放项身份尚不可核验");
+        var localAncestors = control.Parents.Reverse().TakeWhile(id => id != control.Document).ToArray();
+        var scope = localAncestors.FirstOrDefault(id => id != rootId &&
             regions.TryGetValue(id, out var region) && HasMediaSemantics(region.Label));
-        if (scope == null) throw new MediaObservationException("缺少明确的媒体语义区域");
+        if (scope == null)
+        {
+            foreach (var id in localAncestors)
+            {
+                if (regions.TryGetValue(id, out var region) && ClosedCluster(region.Element, control.Document, timer, cache))
+                { scope = id; break; }
+            }
+        }
+        if (scope == null) throw new MediaObservationException("未找到可核验的局部媒体控件组");
         var seekers = items.Where(x => x.Visible && x.Enabled && x.Document == control.Document && x.Type == ControlType.Slider &&
             x.Parents.Contains(scope) &&
-            IsSeek(x.Name)).ToArray();
+            MediaCluster.IsSeek(x.Name)).ToArray();
         if (seekers.Length > 1) throw new MediaObservationException("存在多个媒体时间线，无法确定目标");
         var seek = seekers.SingleOrDefault();
         // 当前没有原生播放器的稳定播放项身份时，不用窗口标题替代它。
-        if (control.Document == null) throw new MediaObservationException("原生媒体播放项身份尚不可核验");
         var context = documents.Single(x => x.Id == control.Document);
         var contextValue = context.Element.TryGetCurrentPattern(ValuePattern.Pattern, out var value) ? ((ValuePattern)value).Current.Value : "";
+        var documentBranch = string.Join("\n", control.Parents.Where(id => documents.Any(d => d.Id == id)));
         var identity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-            $"{context.Id}\n{context.Name}\n{contextValue}\n{scope}\n{control.Id}\n{seek?.Id}")));
-        var clock = ReadClock(regions[scope].Element, scope, timer, cache);
+            $"{documentBranch}\n{context.Id}\n{context.Name}\n{contextValue}\n{scope}\n{control.Id}\n{seek?.Id}")));
+        var clock = ReadClock(regions[scope].Element, scope, control.Document, timer, cache);
         var source = clock == null ? TimelineSource.None : TimelineSource.Text;
         if (clock == null && seek != null && seek.Element.TryGetCurrentPattern(ValuePattern.Pattern, out var description) &&
             MediaClock.TryParse(((ValuePattern)description).Current.Value, out var position, out var duration))
@@ -132,7 +141,49 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
         return result;
     }
 
-    private static ClockReading? ReadClock(AutomationElement scope, string scopeId, Stopwatch timer, CacheRequest cache)
+    private static bool ClosedCluster(AutomationElement scope, string document, Stopwatch timer, CacheRequest cache)
+    {
+        AutomationElementCollection nodes;
+        using (cache.Activate()) nodes = scope.FindAll(TreeScope.Descendants, Condition.TrueCondition);
+        if (timer.ElapsedMilliseconds > 1500 || nodes.Count > 300) throw new MediaObservationException("媒体控件组读取不完整或超时");
+        var members = new List<MediaClusterMember>();
+        var scopeId = string.Join(".", (int[])scope.GetCachedPropertyValue(AutomationElement.RuntimeIdProperty));
+        foreach (AutomationElement node in nodes)
+        {
+            if (timer.ElapsedMilliseconds > 1500) throw new MediaObservationException("媒体控件组读取超时");
+            var current = node.Cached;
+            if (current.IsOffscreen || current.BoundingRectangle.IsEmpty) continue;
+            var type = current.ControlType;
+            if (type == ControlType.Document) return false;
+            MediaMember member;
+            if (type == ControlType.Group || type == ControlType.Pane) member = MediaMember.Container;
+            else if (type == ControlType.Text) member = MediaCluster.IsTimeText(current.Name) ? MediaMember.Time : MediaMember.Foreign;
+            else if (type == ControlType.Button && current.IsEnabled && Semantics(current.Name) != Playback.Unknown && node.TryGetCurrentPattern(InvokePattern.Pattern, out _)) member = MediaMember.Playback;
+            else if (type == ControlType.Slider && current.IsEnabled && MediaCluster.IsSeek(current.Name)) member = MediaMember.Seek;
+            else if (type == ControlType.Slider && current.IsEnabled && MediaCluster.IsVolume(current.Name)) member = MediaMember.Volume;
+            else if (type == ControlType.Button && current.IsEnabled && MediaCluster.IsAction(current.Name)) member = MediaMember.Action;
+            else return false;
+            var parent = TreeWalker.ControlViewWalker.GetParent(node, cache);
+            if (parent == null) throw new MediaObservationException("媒体控件组已改变");
+            members.Add(new(member, string.Join(".", (int[])parent.GetCachedPropertyValue(AutomationElement.RuntimeIdProperty))));
+        }
+        return MediaCluster.IsClosed(scopeId, members) && NearestDocument(scope, cache, timer) == document;
+    }
+
+    private static string? NearestDocument(AutomationElement node, CacheRequest cache, Stopwatch timer)
+    {
+        for (var depth = 0; depth < 35; depth++)
+        {
+            if (timer.ElapsedMilliseconds > 1500) throw new MediaObservationException("媒体文档读取超时");
+            if (node.Cached.ControlType == ControlType.Document)
+                return string.Join(".", (int[])node.GetCachedPropertyValue(AutomationElement.RuntimeIdProperty));
+            node = TreeWalker.ControlViewWalker.GetParent(node, cache);
+            if (node == null) return null;
+        }
+        throw new MediaObservationException("媒体文档观察不完整");
+    }
+
+    private static ClockReading? ReadClock(AutomationElement scope, string scopeId, string document, Stopwatch timer, CacheRequest cache)
     {
         void Check() { if (timer.ElapsedMilliseconds > 1500) throw new MediaObservationException("媒体时间读取超时"); }
         var walker = TreeWalker.ControlViewWalker;
@@ -149,6 +200,7 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
         void Add(AutomationElement node, string text)
         {
             if (text.Length > 512 || !MediaClock.TryParse(text, out var position, out var duration)) return;
+            if (NearestDocument(node, cache, timer) != document) return;
             var ancestors = new List<string>();
             var parent = walker.GetParent(node, cache);
             while (parent != null && ancestors.Count < 35)
@@ -187,9 +239,6 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
         Check();
         return MediaClock.Unique(readings);
     }
-
-    private static bool IsSeek(string name) => Regex.IsMatch(name.Trim(),
-        @"^(seek(?: slider)?|position|timeline|定位|播放进度|进度|时间线)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     internal static bool HasMediaSemantics(string label) => Regex.IsMatch(label,
         @"\b(?:video|audio|media)\s+player\b|视频播放器|媒体播放器|音频播放器|视频播放区域", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);

@@ -44,6 +44,9 @@ var checks = new Dictionary<string, Action>
     ["时间与媒体语义解析"] = () => { True(MediaClock.TryParse("0 Minutes 37 Seconds of 10 Minutes 34 Seconds",out var p,out var d));Equal(37d,p);Equal(634d,d);True(!MediaClock.TryParse("1:70 / 10:00",out _,out _));Equal(Playback.Unknown,UiMedia.Semantics("PausePal"));Equal(Playback.Paused,UiMedia.Semantics("Play keyboard shortcut k")); }
 };
 foreach (var check in MigrationChecks()) checks.Add(check.Key, check.Value);
+foreach (var check in ClusterChecks()) checks.Add(check.Key, check.Value);
+foreach (var check in MediaPolicyTests.Checks()) checks.Add(check.Key, check.Value);
+foreach (var check in ForegroundChecks()) checks.Add(check.Key, check.Value);
 foreach (var check in ProtocolTests.Checks()) checks.Add(check.Key, check.Value);
 var passed=0;
 foreach(var(name,run) in checks)
@@ -145,6 +148,28 @@ static void RejectClocks(ClockReading[] clocks)
     catch(MediaObservationException) { return; }
     throw new Exception("歧义时间来源未拒绝");
 }
+
+static Dictionary<string, Action> ClusterChecks() => new()
+{
+    ["原生视频时间进度标签与普通滑块区分"] = () =>
+    { True(MediaCluster.IsSeek("视频时间进度条"));True(MediaCluster.IsSeek("video time scrubber"));True(!MediaCluster.IsSeek("音量"));True(!MediaCluster.IsSeek("进度设置")); },
+    ["媒体音量与动作名称完整匹配"] = () =>
+    { True(MediaCluster.IsVolume("volume"));True(MediaCluster.IsAction("进入全屏模式"));True(!MediaCluster.IsAction("进入全屏模式教程"));True(!MediaCluster.IsVolume("调整音量的说明")); },
+    ["无名控件组不吞入普通正文或网页时间"] = () =>
+    { True(MediaCluster.IsTimeText("02:34"));True(MediaCluster.IsTimeText("正在缓冲"));True(!MediaCluster.IsTimeText("文章发布日期")); },
+    ["文档移到另一顶层或仅有顶层不继承资格"] = () =>
+    { True(!MediaCluster.SameDocumentBranch(["frame","page-a"],["frame","page-b"]));True(!MediaCluster.SameDocumentBranch(["page"],["frame","page"]));True(!MediaCluster.SameDocumentBranch([],[])); }
+};
+
+static Dictionary<string, Action> ForegroundChecks() => new()
+{
+    ["同一顶层下的子窗口通知不误报切走"] = () => { var f=new ForegroundIdentity(1);True(!f.Observe(1,1));True(!f.Observe(1,1)); },
+    ["切走又切回仍撤销原资格"] = () => { var f=new ForegroundIdentity(1);True(f.Observe(2,2));True(f.Observe(1,1)); },
+    ["同进程的独立弹窗仍按不同顶层撤销"] = () => { var f=new ForegroundIdentity(1);True(f.Observe(3,3)); },
+    ["未知事件或未知实际前台不得保留资格"] = () => { var f=new ForegroundIdentity(1);True(f.Observe(0,1));True(f.Observe(1,0));True(f.Observe(0,0)); },
+    ["迟到事件冲突仍撤销且不污染下一次前台基线"] = () => { var f=new ForegroundIdentity(1);True(f.Observe(2,1));True(!f.Observe(1,1)); },
+    ["事件目标相同但实际已切走仍撤销"] = () => { var f=new ForegroundIdentity(1);True(f.Observe(1,2));True(!f.Observe(2,2)); }
+};
 
 sealed class FakeEnvironment:IMediaEnvironment
 {

@@ -11,7 +11,10 @@ namespace PausePal.Windows;
 
 internal static class Program
 {
-    [DllImport("user32.dll")] internal static extern nint GetForegroundWindow();
+    [DllImport("user32.dll", EntryPoint = "GetForegroundWindow")] internal static extern nint NativeForegroundWindow();
+    [DllImport("user32.dll")] private static extern nint GetAncestor(nint window, uint flags);
+    internal static nint TopLevelWindow(nint window) => window == 0 ? 0 : GetAncestor(window, 2);
+    internal static nint GetForegroundWindow() => TopLevelWindow(NativeForegroundWindow());
     [DllImport("user32.dll")] internal static extern uint GetWindowThreadProcessId(nint hwnd, out uint pid);
 
     [STAThread]
@@ -105,6 +108,7 @@ internal static class Program
                 var playback = UiMedia.Semantics(c.Name) != Playback.Unknown;
                 var clock = Regex.IsMatch(c.Name, @"^(?:\d{1,2}:)?\d{1,2}:\d{2}(?:\s*/\s*(?:\d{1,2}:)?\d{1,2}:\d{2})?$|^\d+ (?:Minutes?|Hours?) .+ of \d+ (?:Minutes?|Hours?) .+$", RegexOptions.CultureInvariant);
                 if (c.ControlType == ControlType.Document || c.ControlType == ControlType.Slider ||
+                    c.ControlType == ControlType.Group || c.ControlType == ControlType.Pane ||
                     ((c.ControlType == ControlType.Button || c.ControlType == ControlType.Text) && (playback || clock)))
                 {
                     object? value = null;
@@ -120,7 +124,12 @@ internal static class Program
                             System.Globalization.CultureInfo.InvariantCulture, out var scalar) && double.IsFinite(scalar))
                         value = new { Value = scalar, Unit = "unknown" };
                     Console.WriteLine(JsonSerializer.Serialize(new { kind = "control", type = c.ControlType.ProgrammaticName,
-                        semantic = playback ? (UiMedia.Semantics(c.Name) == Playback.Playing ? "PAUSE" : "PLAY") : clock ? "TIME" : "OTHER",
+                        semantic = playback ? (UiMedia.Semantics(c.Name) == Playback.Playing ? "PAUSE" : "PLAY") : clock ? "TIME" :
+                            c.ControlType == ControlType.Slider && Regex.IsMatch(c.Name, "seek|position|timeline|进度|时间线", RegexOptions.IgnoreCase) ? "SEEK" :
+                            Regex.IsMatch(c.Name, "volume|音量", RegexOptions.IgnoreCase) ? "VOLUME" : "OTHER",
+                        mediaNamed = UiMedia.HasMediaSemantics(c.Name + " " + c.HelpText),
+                        helpClock = MediaClock.TryParse(c.HelpText, out var helpPosition, out var helpDuration)
+                            ? new { position = helpPosition, duration = helpDuration } : null,
                         context = c.ControlType == ControlType.Document ? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(c.Name))) : null,
                         id, document, parent, offscreen = c.IsOffscreen, enabled = c.IsEnabled,
                         invoke = node.TryGetCurrentPattern(InvokePattern.Pattern, out _), value, clockValue }));
@@ -146,5 +155,16 @@ internal static class Program
                 elapsedMs = elapsed.ElapsedMilliseconds, foregroundUnchanged = GetForegroundWindow() == hwnd && finalPid == pid }));
         }
         catch (Exception error) { Console.WriteLine(JsonSerializer.Serialize(new { kind = "uia-error", incomplete = true, error = error.GetType().Name, code = error.HResult })); }
+        try
+        {
+            if (GetForegroundWindow() != hwnd) return;
+            var media = UiMedia.Read();
+            Console.WriteLine(JsonSerializer.Serialize(new { kind = "media-read", state = media.State.ToString(), source = media.Source.ToString(),
+                hasTimeline = media.HasTimeline, beforeEnd = media.BeforeEnd,
+                position = double.IsFinite(media.Position) ? (double?)media.Position : null,
+                duration = double.IsFinite(media.Maximum) ? (double?)media.Maximum : null }));
+        }
+        catch (Exception error) { Console.WriteLine(JsonSerializer.Serialize(new { kind = "media-read-error",
+            reason = error is MediaObservationException ? error.Message : error.GetType().Name })); }
     }
 }

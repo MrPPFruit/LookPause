@@ -69,18 +69,18 @@ internal static class MediaRewind
         // 不从搜索框、地址栏、编辑框抢焦点；焦点必须属于同一前台文档。
         var focusedDoc = Document(focused, window, rejectEditing: true);
         var controlDoc = Document(control, window, rejectEditing: false);
-        return focusedDoc != null && controlDoc != null && Automation.Compare(focusedDoc, controlDoc);
+        return focusedDoc != null && controlDoc != null && MediaCluster.SameDocumentBranch(focusedDoc, controlDoc);
     }
-    private static AutomationElement? Document(AutomationElement element, nint window, bool rejectEditing)
+    private static string[]? Document(AutomationElement element, nint window, bool rejectEditing)
     {
-        AutomationElement? document = null;
+        var documents = new List<string>();
         for (var i = 0; i < 35; i++)
         {
             var current = element.Current;
             if (rejectEditing && (current.ControlType == ControlType.Edit || current.ControlType == ControlType.ComboBox ||
                 current.IsPassword || element.TryGetCurrentPattern(ValuePattern.Pattern, out var value) && !((ValuePattern)value).Current.IsReadOnly)) return null;
-            if (current.ControlType == ControlType.Document) document = element;
-            if (current.NativeWindowHandle == window) return document;
+            if (current.ControlType == ControlType.Document) documents.Add(string.Join(".", element.GetRuntimeId()));
+            if (current.NativeWindowHandle == window) return documents.Count > 0 ? [.. documents] : null;
             element = TreeWalker.ControlViewWalker.GetParent(element);
             if (element == null) return null;
         }

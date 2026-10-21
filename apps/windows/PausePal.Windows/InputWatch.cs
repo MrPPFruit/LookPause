@@ -19,7 +19,9 @@ internal sealed class InputWatch : IDisposable, IRevocation
     private long epoch;
     private long keyboardEvents, mouseEvents, foregroundEvents, externalRevocations, heartbeatFailures;
     private long sameForegroundEvents, differentForegroundEvents, injectedKeyboardEvents, injectedMouseEvents;
-    private nint lastForeground = Program.GetForegroundWindow();
+    private sealed record ForegroundSample(long Window, long Root, long Actual, long ActualRoot, uint EventTime, long CallbackTime, int Object, int Child);
+    private ForegroundSample? foregroundSample, previousForegroundSample;
+    private readonly ForegroundIdentity foregroundIdentity = new(Program.GetForegroundWindow().ToInt64());
     private int disposed;
     private readonly InputHeartbeat heartbeat;
     public long Epoch => Interlocked.Read(ref epoch);
@@ -30,6 +32,7 @@ internal sealed class InputWatch : IDisposable, IRevocation
         foreground = Interlocked.Read(ref foregroundEvents), external = Interlocked.Read(ref externalRevocations),
         sameForeground = Interlocked.Read(ref sameForegroundEvents), differentForeground = Interlocked.Read(ref differentForegroundEvents),
         injectedKeyboard = Interlocked.Read(ref injectedKeyboardEvents), injectedMouse = Interlocked.Read(ref injectedMouseEvents),
+        foregroundSample = Volatile.Read(ref foregroundSample), previousForegroundSample = Volatile.Read(ref previousForegroundSample),
         heartbeatFailures = Interlocked.Read(ref heartbeatFailures), heartbeatAgeMs = Environment.TickCount64 - heartbeat.LastPulse,
         keyboardInstalled = keyboardHook != 0, mouseInstalled = mouseHook != 0, foregroundInstalled = windowHook != 0 };
 
@@ -58,9 +61,13 @@ internal sealed class InputWatch : IDisposable, IRevocation
         };
         foreground = (hook, kind, window, obj, child, thread, time) =>
         {
-            if (Interlocked.Exchange(ref lastForeground, window) == window) Interlocked.Increment(ref sameForegroundEvents);
-            else Interlocked.Increment(ref differentForegroundEvents);
-            Interlocked.Increment(ref foregroundEvents); Interlocked.Increment(ref epoch);
+            var actual = Program.NativeForegroundWindow();
+            var sample = new ForegroundSample(window.ToInt64(), Program.TopLevelWindow(window).ToInt64(), actual.ToInt64(), Program.TopLevelWindow(actual).ToInt64(), time, Environment.TickCount64, obj, child);
+            Interlocked.Exchange(ref previousForegroundSample, Interlocked.Exchange(ref foregroundSample, sample));
+            if (foregroundIdentity.Observe(sample.Root, sample.ActualRoot))
+            { Interlocked.Increment(ref differentForegroundEvents); Interlocked.Increment(ref epoch); }
+            else Interlocked.Increment(ref sameForegroundEvents);
+            Interlocked.Increment(ref foregroundEvents);
         };
         keyboardHook = SetWindowsHookEx(13, keyboard, GetModuleHandle(null), 0);
         mouseHook = SetWindowsHookEx(14, mouse, GetModuleHandle(null), 0);

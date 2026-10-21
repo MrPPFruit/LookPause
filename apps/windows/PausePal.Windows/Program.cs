@@ -133,6 +133,15 @@ internal static class Program
                         context = c.ControlType == ControlType.Document ? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(c.Name))) : null,
                         id, document, parent, offscreen = c.IsOffscreen, enabled = c.IsEnabled,
                         invoke = node.TryGetCurrentPattern(InvokePattern.Pattern, out _), value, clockValue }));
+                    if (c.ControlType == ControlType.Slider && MediaCluster.IsSeek(c.Name))
+                    {
+                        var full = NativeUiaDescription.Read(node, hwnd, node.GetRuntimeId());
+                        var currentText = node.TryGetCurrentPattern(ValuePattern.Pattern, out var descriptionPattern) ? ((ValuePattern)descriptionPattern).Current.Value : "";
+                        var parsed = full != null && MediaClock.TrySplitDescription(currentText, full, out _, out _);
+                        var wrongId = (int[])node.GetRuntimeId().Clone(); wrongId[^1] ^= 1;
+                        var mismatchRejected = NativeUiaDescription.Read(node, hwnd, wrongId) == null;
+                        Console.WriteLine(JsonSerializer.Serialize(new { kind = "description-probe", hasDescription = full != null, hasSplitTimeline = parsed, mismatchRejected }));
+                    }
                 }
                 // 有界逐节点读取，不先通过 FindAll 拉取整个应用树。
                 if (depth < 35)

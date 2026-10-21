@@ -7,6 +7,15 @@ internal sealed record ClockReading(string Id, string[] Ancestors, double Positi
 
 internal static class MediaClock
 {
+    public static bool TrySplitDescription(string positionText, string durationText, out double position, out double duration)
+    {
+        position = duration = 0;
+        var current = Regex.Match(positionText.Trim(), @"^(?:elapsed time|已播放时间)\s*[:：]\s*(?<time>.+)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var total = Regex.Match(durationText.Trim(), @"^(?:total time|总时间|总时长)\s*[:：]\s*(?<time>.+)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return current.Success && total.Success && Time(current.Groups["time"].Value, out position) &&
+            Time(total.Groups["time"].Value, out duration) && duration > 0 && position >= 0 && position <= duration;
+    }
+
     public static ClockReading? Unique(IReadOnlyList<ClockReading> readings)
     {
         // 同一组合控件与其子文字可能重复暴露相同时间；独立时钟不能只因数值相等就合并。

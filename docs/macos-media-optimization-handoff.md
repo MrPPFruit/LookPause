@@ -16,6 +16,7 @@ git fetch origin codex/windows-receiver
 git show origin/codex/windows-receiver:docs/media-control-policy.md
 git show origin/codex/windows-receiver:tests/media-policy/cases.json
 git show origin/codex/windows-receiver:docs/comet/reports/2026-10-21-windows-unnamed-media.md
+git show origin/codex/windows-receiver:docs/comet/reports/2026-10-21-windows-native-description.md
 ```
 
 遵循本机 AGENTS、现行 decision-log 和现有 Mac 活动变更；先审查方案，再实施。以上文档／用例可选择性集成到 Mac 开发分支，先比较本机已有版本，不整分支覆盖 Mac 或 Android。Windows 的运行产物、日志、配对身份和系统权限均不能迁移为 Mac 证据。
@@ -28,7 +29,9 @@ git show origin/codex/windows-receiver:docs/comet/reports/2026-10-21-windows-unn
 
 必须联动检查 `MediaSession.swift` 的暂停归属与恢复锚点、`ResumeRewind.swift` 的文档／焦点边界，以及输入撤销。只取消过严的表示形式要求，不取消真实暂停确认、时间单位核验或手动暂停保护。回退仍独立降级，普通操作后可建立新轮。
 
-原生网页视频可能只暴露局部已播放时间，缺少完整时长或单位证据；Windows 已发现此缺口，未解决。请在 Mac 单独采样时间来源和实际效果，不复制 Windows 的数值范围解释，也不把 Mac 的既有三个播放器通过等同于原生网页视频通过。
+Windows 0.1.4后续定位到原生时间的漏读：Chromium把当前时间与总时长分置于aria-valuetext和aria-description，UIA映射为ValuePattern与FullDescription。只读原生属性桥已读齐并取得真实视频3轮成功，但隐藏控件及暂停后描述变化仍有失败，详见[后续报告](comet/reports/2026-10-21-windows-native-description.md)。请在Mac采样AX实际暴露的属性、完整描述和时序，不复制UIA字段名或数值范围解释，也不把已有三播放器通过当作原生网页视频通过。
+
+另需区分控制目标与辅助结构：Windows原生音量条收起时，节点仍启用且非Offscreen但没有bounds；它只证明局部组结构，不参与执行。Mac应查清本平台收起控件的等价表现，不能为了要求每个辅助滑块已展开而误拒整组；同时不要放开隐藏播放目标或跨组拼接。时间描述测试应至少包括中文“已播放时间：2:23／总时间：28:54”、英文“elapsed time: 0:02／total time: 0:05”，以及剩余时间、无单位、直播和越界拒绝。
 
 也不要把“暂停位置锚点”机械等同于“秒时间线”：概念上前者可以使用其他度量，但泛化RangeValue会丢失时长变化线索，且默认范围／直播窗口不证明媒体结束。Windows已独立评审这个候选，没有作为等价简化实施。若Mac研究该方向，须补具体能力合同及独立媒体身份／结束证据，不能仅用数值相等取消现有保护。
 

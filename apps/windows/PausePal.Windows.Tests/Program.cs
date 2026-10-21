@@ -140,7 +140,18 @@ static Dictionary<string, Action> MigrationChecks() => new()
     ["独立相同数值时钟仍有歧义"] = () => RejectClocks([new("a",[],20,60),new("b",[],20,60)]),
     ["父子时间冲突不能去重隐藏"] = () => RejectClocks([new("group",[],20,60),new("text",["group"],21,60)]),
     ["时间线缺失与结束分开"] = () =>
-    { var(e,_)=Setup();True(MediaClock.Unique([])==null);True(!(e.Frame with {Position=634}).BeforeEnd);True((e.Frame with {Position=634}).HasTimeline);True(!(e.Frame with {Source=TimelineSource.None}).HasTimeline); }
+    { var(e,_)=Setup();True(MediaClock.Unique([])==null);True(!(e.Frame with {Position=634}).BeforeEnd);True((e.Frame with {Position=634}).HasTimeline);True(!(e.Frame with {Source=TimelineSource.None}).HasTimeline); },
+    ["原生当前时间与总时长分开描述可解析"] = () =>
+    { True(MediaClock.TrySplitDescription("已播放时间：2:23","总时间：28:54",out var p,out var d));Equal(143d,p);Equal(1734d,d);True(MediaClock.TrySplitDescription("elapsed time: 0:02","total time: 0:05",out _,out _)); },
+    ["剩余时间或普通说明不能当作总时长"] = () =>
+    { True(!MediaClock.TrySplitDescription("elapsed time: 0:02","remaining time: 0:05",out _,out _));True(!MediaClock.TrySplitDescription("2","5",out _,out _));True(!MediaClock.TrySplitDescription("elapsed time: 0:02","video duration 0:05",out _,out _)); },
+    ["分开时间缺失异常直播及越界不授予资格"] = () =>
+    { foreach(var text in new[]{"","total time: live","total time: 0:00","total time: 1:70","total time: 0:01"})True(!MediaClock.TrySplitDescription("elapsed time: 0:02",text,out _,out _)); },
+    ["分开时间来源变换仍撤销原资格"] = () =>
+    { var(e,s)=Owned();e.Frame=e.Frame with {Source=TimelineSource.SeekDescription};e.Step(s,200);s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count); },
+    ["原生描述总时长变化撤销暂停归属"] = () =>
+    { var(e,s)=Setup();e.Frame=e.Frame with {Source=TimelineSource.SeekDescription};s.Start();s.Receive(WatchingIntent.AWAY);e.Step(s,200);e.Frame=e.Frame with {Maximum=900};s.Receive(WatchingIntent.ATTENDING);Equal(1,e.Actions.Count); },
+    ["零窗口不进入原生描述读取"] = () => True(NativeUiaDescription.Read(null!,0,[])==null)
 };
 static void RejectClocks(ClockReading[] clocks)
 {

@@ -1,5 +1,7 @@
 # Windows 无名媒体控件组修正与跨端交接
 
+本页记录0.1.3历史结果；后续0.1.4的原生时间描述修正、真实视频结果与仍开放问题见[后续报告](2026-10-21-windows-native-description.md)。
+
 日期：2026-10-21。分支 `codex/windows-receiver`，起点 `ea7b7df`，开始时工作树干净。用户批准按研究方案实施，并要求 Mac 也评估共用问题。Windows 本轮没有修改 Mac、Android 源码或协议。
 
 ## 根因与范围

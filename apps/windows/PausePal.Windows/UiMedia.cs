@@ -7,13 +7,13 @@ using System.Windows.Automation;
 namespace PausePal.Windows;
 
 internal enum Playback { Playing, Paused, Unknown }
-internal enum TimelineSource { None, Text, SeekText, Numeric }
+internal enum TimelineSource { None, Text, SeekText, SeekDescription, Numeric }
 
 internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, AutomationElement Control,
     AutomationElement? Timeline, Playback State, double Position, double Minimum, double Maximum, long ObservedAt = 0)
 {
     public TimelineSource Source { get; init; } = TimelineSource.Numeric;
-    public bool Rounded => Source is TimelineSource.Text or TimelineSource.SeekText;
+    public bool Rounded => Source is TimelineSource.Text or TimelineSource.SeekText or TimelineSource.SeekDescription;
     public bool HasTimeline => Source != TimelineSource.None && double.IsFinite(Position) && double.IsFinite(Minimum) &&
         double.IsFinite(Maximum) && Minimum >= 0 && Maximum > Minimum && Position >= Minimum && Position <= Maximum;
     public bool BeforeEnd => HasTimeline && Position < Maximum - 0.05;
@@ -128,9 +128,19 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
             $"{documentBranch}\n{context.Id}\n{context.Name}\n{contextValue}\n{scope}\n{control.Id}\n{seek?.Id}")));
         var clock = ReadClock(regions[scope].Element, scope, control.Document, timer, cache);
         var source = clock == null ? TimelineSource.None : TimelineSource.Text;
-        if (clock == null && seek != null && seek.Element.TryGetCurrentPattern(ValuePattern.Pattern, out var description) &&
-            MediaClock.TryParse(((ValuePattern)description).Current.Value, out var position, out var duration))
-        { clock = new ClockReading(seek.Id, [], position, duration); source = TimelineSource.SeekText; }
+        if (clock == null && seek != null && seek.Element.TryGetCurrentPattern(ValuePattern.Pattern, out var description))
+        {
+            var text = ((ValuePattern)description).Current.Value;
+            if (MediaClock.TryParse(text, out var position, out var duration))
+            { clock = new ClockReading(seek.Id, [], position, duration); source = TimelineSource.SeekText; }
+            else
+            {
+                var full = NativeUiaDescription.Read(seek.Element, window,
+                    (int[])seek.Element.GetCachedPropertyValue(AutomationElement.RuntimeIdProperty));
+                if (full != null && MediaClock.TrySplitDescription(text, full, out position, out duration))
+                { clock = new ClockReading(seek.Id, [], position, duration); source = TimelineSource.SeekDescription; }
+            }
+        }
         // 无单位 RangeValue 不当作秒；时间缺失与结束分开，缺失不能获得恢复资格。
         var result = new UiMedia(window, processId, identity, control.Element, seek?.Element, Semantics(control.Name),
             clock?.Position ?? double.NaN, clock == null ? double.NaN : 0, clock?.Duration ?? double.NaN, observedAt) { Source = source };
@@ -143,6 +153,7 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
 
     private static bool ClosedCluster(AutomationElement scope, string document, Stopwatch timer, CacheRequest cache)
     {
+        if (scope.Cached.IsOffscreen || scope.Cached.BoundingRectangle.IsEmpty) return false;
         AutomationElementCollection nodes;
         using (cache.Activate()) nodes = scope.FindAll(TreeScope.Descendants, Condition.TrueCondition);
         if (timer.ElapsedMilliseconds > 1500 || nodes.Count > 300) throw new MediaObservationException("媒体控件组读取不完整或超时");
@@ -152,8 +163,11 @@ internal sealed record UiMedia(nint Window, uint ProcessId, string Identity, Aut
         {
             if (timer.ElapsedMilliseconds > 1500) throw new MediaObservationException("媒体控件组读取超时");
             var current = node.Cached;
-            if (current.IsOffscreen || current.BoundingRectangle.IsEmpty) continue;
             var type = current.ControlType;
+            if (current.IsOffscreen) continue;
+            // 收起的音量条可无显示区域，仅用作结构证据；不向它提交动作。
+            var auxiliaryVolume = type == ControlType.Slider && current.IsEnabled && MediaCluster.IsVolume(current.Name);
+            if (current.BoundingRectangle.IsEmpty && !auxiliaryVolume) continue;
             if (type == ControlType.Document) return false;
             MediaMember member;
             if (type == ControlType.Group || type == ControlType.Pane) member = MediaMember.Container;

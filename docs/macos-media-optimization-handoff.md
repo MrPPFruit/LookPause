@@ -1,0 +1,47 @@
+# Mac 媒体识别优化接续
+
+2026-10-26接续：Mac实现与代码审查已推进，范围和未验证项见[Mac报告](comet/reports/2026-10-26-mac-media-structure.md)。下文保留Windows交接时的检查建议，不再代表Mac源码尚未开始。
+
+日期：2026-10-21。用户已批准 Windows 取消固定容器名称门槛，并要求 Mac 在本平台评估相同问题。这里是接续说明，Mac 源码尚未由本次 Windows 工作修改，原 Mac／Android 未收尾项仍保留。
+
+统一跟踪：[GitHub Issue #1](https://github.com/MrPPFruit/LookPause/issues/1)。Mac会话可从该Issue和本页接续；创建Issue不等于Mac已开始执行。
+
+## 取得资料与保护已有工作
+
+在现有 Mac 会话及工作目录续做，不另建 Codex 会话。先检查分支、远端和未提交改动，安全获取 `codex/windows-receiver`；不得从早期 main 建立依赖，也不得重置、覆盖或清理现有改动。
+
+可先只读获取，不切换当前工作区：
+
+```sh
+git status --short
+git fetch origin codex/windows-receiver
+git show origin/codex/windows-receiver:docs/media-control-policy.md
+git show origin/codex/windows-receiver:tests/media-policy/cases.json
+git show origin/codex/windows-receiver:docs/comet/reports/2026-10-21-windows-unnamed-media.md
+git show origin/codex/windows-receiver:docs/comet/reports/2026-10-21-windows-native-description.md
+git show origin/codex/windows-receiver:docs/comet/reports/2026-10-21-windows-rewind-focus.md
+```
+
+遵循本机 AGENTS、现行 decision-log 和现有 Mac 活动变更；先审查方案，再实施。以上文档／用例可选择性集成到 Mac 开发分支，先比较本机已有版本，不整分支覆盖 Mac 或 Android。Windows 的运行产物、日志、配对身份和系统权限均不能迁移为 Mac 证据。
+
+## 核查位置与建议
+
+`apps/macos/Sources/LookPauseMediaProbe/GenericPilot.swift` 的 `frontMedia` 当前沿祖先传播 `mediaScope`，以描述／角色描述命中视频相关词作为控件进入候选的门槛。同时需要核对 AXWebArea 的地址匹配是否把正常嵌套播放器排除。Mac 的 AX 可能比 UIA 提供更多媒体角色，须以本机完整输入输出为证，不能因为 Windows 不暴露名称就假定 Mac 也不暴露。
+
+按[共用规则](media-control-policy.md)评估：保留已有明确媒体证据；缺少名称时才考虑可证明的局部功能组，拒绝从整页或兄弟框架拼接。直接同组是 Windows 本轮采用的保守结构合同，Mac 若暴露不同层级，应先证明等价的局部关联，再更新共用规则及用例，不机械按控件个数硬凑。
+
+必须联动检查 `MediaSession.swift` 的暂停归属与恢复锚点、`ResumeRewind.swift` 的文档／焦点边界，以及输入撤销。只取消过严的表示形式要求，不取消真实暂停确认、时间单位核验或手动暂停保护。回退仍独立降级，普通操作后可建立新轮。
+
+Windows 0.1.4后续定位到原生时间的漏读：Chromium把当前时间与总时长分置于aria-valuetext和aria-description，UIA映射为ValuePattern与FullDescription。只读原生属性桥已读齐并取得真实视频3轮成功，但隐藏控件及暂停后描述变化仍有失败，详见[后续报告](https://github.com/MrPPFruit/LookPause/blob/1f5d597200a53025e5f2785cad9fe39da015d667/docs/comet/reports/2026-10-21-windows-native-description.md)。请在Mac采样AX实际暴露的属性、完整描述和时序，不复制UIA字段名或数值范围解释，也不把已有三播放器通过当作原生网页视频通过。
+
+另需区分控制目标与辅助结构：Windows原生音量条收起时，节点仍启用且非Offscreen但没有bounds；它只证明局部组结构，不参与执行。Mac应查清本平台收起控件的等价表现，不能为了要求每个辅助滑块已展开而误拒整组；同时不要放开隐藏播放目标或跨组拼接。时间描述测试应至少包括中文“已播放时间：2:23／总时间：28:54”、英文“elapsed time: 0:02／total time: 0:05”，以及剩余时间、无单位、直播和越界拒绝。
+
+也不要把“暂停位置锚点”机械等同于“秒时间线”：概念上前者可以使用其他度量，但泛化RangeValue会丢失时长变化线索，且默认范围／直播窗口不证明媒体结束。Windows已独立评审这个候选，没有作为等价简化实施。若Mac研究该方向，须补具体能力合同及独立媒体身份／结束证据，不能仅用数值相等取消现有保护。
+
+## 交付要求
+
+Windows 0.1.5另确认回退的焦点差异：播放按钮不适合该样本的Left；进度滑块虽能回退却改变Space语义，最终仅将已验证scope作为可聚焦候选，在原预算内等待exact焦点、重验Playing再发一次Left。原网站三轮及随后Space／左右键通过，详见[回退报告](https://github.com/MrPPFruit/LookPause/blob/1f5d597200a53025e5f2785cad9fe39da015d667/docs/comet/reports/2026-10-21-windows-rewind-focus.md)。Mac已有目标进程投递与回退观察，不能直接照搬Windows实现；应分别核对AX目标、焦点异步完成、实际步长及回退后的空格／方向键交互。不要把“键已提交”当作实际回退，也不要发键后立即恢复焦点而改变尚未处理的事件路由。
+
+接入共用合成用例的 Mac 适配测试，并在 Mac 真实 Chrome 上验证原生视频、已有 YouTube／B站回归、嵌套文档、接管与新轮、初始暂停、结束和停止／断线。仅构建或用例通过时继续保留真实验收 GAP。手机沿用 S25 已安装应用，不因桌面优化重签覆盖。
+
+用 GitHub Issue 汇集跨端进展，正文链接仓库内共用规则和用例；具体平台的实施、环境和真实结果分别回链。规则在仓库内版本化，Issue 承担跟踪与讨论；不要在两个对话中各维护一份逐渐分叉的规则。发布前仍按主账号 MrPPFruit 核验，并排除本机日志、私人页面链接、媒体与凭据。

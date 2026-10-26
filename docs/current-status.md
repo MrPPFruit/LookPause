@@ -1,5 +1,9 @@
 # 当前状态、上传范围与剩余收尾
 
+2026-10-26 Mac更新：build7已采用局部媒体结构、严格时间描述和文档／焦点关联；Release编译、签名及本机版本替换完成，普通进程已重新启动。用户要求停止代理回归，此后只做代码审查与必要编译；最新B站／QuickTime／S25及其余边界不登记为已验证。实现、已取得证据和剩余限制见[本轮报告](comet/reports/2026-10-26-mac-media-structure.md)，最终集成状态也在该报告记录。
+
+以下2026-10-19表格是历史交接快照。Windows后续源码已在独立`codex/windows-receiver`分支推进，本轮读取的参考提交为1f5d597；没有将其整个合入Mac integration，也不从源码存在推断Windows产品验收。Android历史缺口仍保留。
+
 核对日期：2026-10-19。本页是交接快照，现行行为仍以product-spec、decision-log、protocol/CONTRACT及活动change为准；历史报告不覆盖后续决定。
 
 ## GitHub与版本

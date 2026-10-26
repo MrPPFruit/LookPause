@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "说明": "跨平台合成用例。角色由各平台适配器提供；不包含真实网页、账号、运行标识或媒体。结构合格不等于已取得暂停恢复资格。",
+  "cases": [
+    { "id": "unnamed-native", "title": "无名控件直接同组可识别", "kind": "cluster", "scope": "player", "members": [
+      {"kind":"Container","parent":"player"}, {"kind":"Playback","parent":"player"}, {"kind":"Seek","parent":"player"},
+      {"kind":"Volume","parent":"player"}, {"kind":"Action","parent":"player"}, {"kind":"Action","parent":"player"}
+    ], "expected": true },
+    { "id": "unrelated-content", "title": "页面内容混入时拒绝扩大边界", "kind": "cluster", "scope": "page", "members": [
+      {"kind":"Playback","parent":"page"}, {"kind":"Seek","parent":"page"}, {"kind":"Volume","parent":"page"},
+      {"kind":"Action","parent":"page"}, {"kind":"Foreign","parent":"page"}
+    ], "expected": false },
+    { "id": "split-controls", "title": "不同分支的四类控件不能拼接", "kind": "cluster", "scope": "page", "members": [
+      {"kind":"Playback","parent":"slideshow"}, {"kind":"Seek","parent":"progress"},
+      {"kind":"Volume","parent":"audio"}, {"kind":"Action","parent":"page"}
+    ], "expected": false },
+    { "id": "two-playback", "title": "两套播放控制不猜测选择", "kind": "cluster", "scope": "player", "members": [
+      {"kind":"Playback","parent":"player"}, {"kind":"Playback","parent":"player"}, {"kind":"Seek","parent":"player"},
+      {"kind":"Volume","parent":"player"}, {"kind":"Action","parent":"player"}
+    ], "expected": false },
+    { "id": "two-seek", "title": "多个时间线不能合为一个播放器", "kind": "cluster", "scope": "player", "members": [
+      {"kind":"Playback","parent":"player"}, {"kind":"Seek","parent":"player"}, {"kind":"Seek","parent":"player"},
+      {"kind":"Volume","parent":"player"}, {"kind":"Action","parent":"player"}
+    ], "expected": false },
+    { "id": "two-volume", "title": "多个音量来源不授予无名组资格", "kind": "cluster", "scope": "player", "members": [
+      {"kind":"Playback","parent":"player"}, {"kind":"Seek","parent":"player"}, {"kind":"Volume","parent":"player"},
+      {"kind":"Volume","parent":"player"}, {"kind":"Action","parent":"player"}
+    ], "expected": false },
+    { "id": "bare-play-time", "title": "播放按钮与时间文字不足以确认媒体组", "kind": "cluster", "scope": "page", "members": [
+      {"kind":"Playback","parent":"page"}, {"kind":"Time","parent":"page"}
+    ], "expected": false },
+    { "id": "same-frame", "title": "同一嵌套文档分支可核验焦点", "kind": "document", "left": ["frame","page"], "right": ["frame","page"], "expected": true },
+    { "id": "sibling-frame", "title": "同顶层的兄弟框架不能共用焦点资格", "kind": "document", "left": ["frame-a","page"], "right": ["frame-b","page"], "expected": false },
+    { "id": "moved-frame", "title": "最近文档相同但外层改变仍撤销资格", "kind": "document", "left": ["frame","page-a"], "right": ["frame","page-b"], "expected": false }
+  ]
+}

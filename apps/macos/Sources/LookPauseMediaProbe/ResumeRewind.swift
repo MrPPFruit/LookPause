@@ -42,16 +42,30 @@ func sendMediaKey(_ key: MediaKey, target: FrontMedia, watch: InputWatch) throws
     let focusedElement = axElement(app, kAXFocusedUIElementAttribute)
     let editing = focusedElement.map(editableFocus) ?? true
     let modifiers = CGEventSource.flagsState(.combinedSessionState).intersection([.maskShift, .maskControl, .maskAlternate, .maskCommand])
-    guard let control = target.control, let focus = focusedElement, !editing,
+    guard let control = target.control, let focus = focusedElement, !editing, target.targetSourcesValid,
+          let focusDocuments = mediaDocuments(focus), sameMediaDocuments(target.documents, focusDocuments),
           CGPreflightPostEventAccess(), watch.denied == nil, stillFrontmost(target),
           modifiers.isEmpty else {
         Logger(subsystem: "com.lookpause.pilot", category: "media").notice("固定媒体键前置检查拒绝 post=\(CGPreflightPostEventAccess()) input=\(watch.denied != nil) front=\(stillFrontmost(target)) focus=\(focusedElement != nil) editing=\(editing) modifiers=\(!modifiers.isEmpty)")
         return false
     }
-    if !CFEqual(focus, control) {
-        guard AXUIElementSetAttributeValue(control, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success else { return false }
+    // 播放按钮可以执行 Space，但不能据此认为 Left 会 seek；优先实际可聚焦的局部媒体表面。
+    let destination: AXUIElement
+    if key == .left {
+        guard let surface = mediaKeyboardSurface(target) else { return false }
+        destination = surface
+    } else { destination = control }
+    if !CFEqual(focus, destination) {
+        guard AXUIElementSetAttributeValue(destination, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success else { return false }
     }
-    guard let focused = axElement(app, kAXFocusedUIElementAttribute), CFEqual(focused, control),
+    let fresh = try frontMedia(includeAudio: false)
+    guard target.matches(fresh), fresh.hint == target.hint, fresh.targetSourcesValid,
+          target.hint != .paused || target.canResume(fresh),
+          stillFrontmost(fresh), watch.denied == nil else { return false }
+    // 焦点未同步就绪则跳过可选能力；不阻塞输入监听，也不重入状态机等待。
+    guard let focused = axElement(app, kAXFocusedUIElementAttribute), CFEqual(focused, destination),
+          !editableFocus(focused), let documents = mediaDocuments(focused), sameMediaDocuments(target.documents, documents),
+          target.mediaScope.map({ insideMediaScope(focused, scope: $0) }) != false,
           stillFrontmost(target), watch.denied == nil else {
         Logger(subsystem: "com.lookpause.pilot", category: "media").notice("固定媒体键焦点校验拒绝")
         return false
@@ -66,6 +80,23 @@ func sendMediaKey(_ key: MediaKey, target: FrontMedia, watch: InputWatch) throws
     }
     Logger(subsystem: "com.lookpause.pilot", category: "media").notice("固定媒体键已提交 key=\(key.rawValue, privacy: .public)")
     return true
+}
+
+@MainActor
+func mediaKeyboardSurface(_ target: FrontMedia) -> AXUIElement? {
+    guard let scope = target.mediaScope, let control = target.control else { return nil }
+    var current = axElement(control, kAXParentAttribute)
+    for _ in 0..<64 {
+        guard let node = current, insideMediaScope(node, scope: scope),
+              let documents = mediaDocuments(node), sameMediaDocuments(target.documents, documents) else { return nil }
+        let role = axAttribute(node, kAXRoleAttribute) as? String ?? ""
+        var settable = DarwinBoolean(false)
+        if role == kAXGroupRole, mediaVisible(node),
+           AXUIElementIsAttributeSettable(node, kAXFocusedAttribute as CFString, &settable) == .success, settable.boolValue { return node }
+        if CFEqual(node, scope) { break }
+        current = axElement(node, kAXParentAttribute)
+    }
+    return nil
 }
 
 func rewindSelfTest() {

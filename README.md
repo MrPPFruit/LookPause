@@ -4,7 +4,7 @@
 
 **Windows接续入口**：[当前状态及未收尾项](docs/current-status.md) → [Windows开发交接](docs/windows-handoff.md) → [可直接粘贴到Windows Codex的指令](docs/windows-codex-prompt.md)。完整源码在`codex/experience-integration`；`main`仍为早期基线。Windows目录目前只有说明/占位，没有可部署程序。
 
-当前Mac构建为build6，新增断链/空心眼睛/睁眼/闭眼的连接与方向图标，见[图标规范与Windows待接入边界](docs/desktop-status-icons.md)。保留build5的UNKNOWN暂停归属修复；手动操作、换片、停止/断线保护保持。三播放器各3轮真实技术链与保护补测通过，最新S25集中体验待用户。见 [修复报告](docs/comet/reports/2026-10-19-unknown-pause-recovery.md) 与 [集中验收清单](docs/comet/reports/2026-10-19-unknown-final-acceptance.md)。
+当前Mac构建为build8，增加用户主动选择的快捷键兼容模式（默认关闭、效果不验证、不回退），见[本轮交付记录](docs/comet/reports/2026-10-31-mac-shortcut-mode.md)。保留build7的媒体结构与文档关联；以下为先前图标与媒体验证范围：新增断链/空心眼睛/睁眼/闭眼的连接与方向图标，见[图标规范与Windows待接入边界](docs/desktop-status-icons.md)。保留build5的UNKNOWN暂停归属修复；手动操作、换片、停止/断线保护保持。三播放器各3轮真实技术链与保护补测通过，最新S25集中体验待用户。见 [修复报告](docs/comet/reports/2026-10-19-unknown-pause-recovery.md) 与 [集中验收清单](docs/comet/reports/2026-10-19-unknown-final-acceptance.md)。
 
 个人自用观影小工具。三星 Android 手机本地识别观看方向，主动连接家庭局域网内选定的一台 Windows 或 Mac。桌面自动识别前台视频，不要求逐页授权、选视频或手动绑定。
 

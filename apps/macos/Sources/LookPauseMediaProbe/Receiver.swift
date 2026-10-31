@@ -66,7 +66,7 @@ final class Receiver {
         var rateWindow = ProcessInfo.processInfo.systemUptime
         var frames = 0
     }
-    let media = MediaSession()
+    let media = MediaController()
     let serverId: String
     private let identity: PairingIdentity
     private let loopbackOnly: Bool

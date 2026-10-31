@@ -12,6 +12,7 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let mediaRow = NSMenuItem(title: "尚未开始观影", action: nil, keyEquivalent: "")
     private let permissionRow = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private let loginRow = NSMenuItem(title: "登录后启动", action: #selector(toggleLogin), keyEquivalent: "")
+    private let shortcutRow = NSMenuItem(title: "下次观影用快捷键兼容模式", action: #selector(toggleShortcut), keyEquivalent: "")
     private var startupError: String?
     private var shownStatus: DesktopStatus?
 
@@ -24,7 +25,9 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
         menu.addItem(connectionRow); menu.addItem(mediaRow); menu.addItem(permissionRow)
-        menu.addItem(.separator()); loginRow.target = self; menu.addItem(loginRow)
+        menu.addItem(.separator()); shortcutRow.target = self; menu.addItem(shortcutRow)
+        shortcutRow.toolTip = "先播放并聚焦播放器，再在手机开始。空格效果未验证，可能误切换；手动操作后需重新开始。不回退。"
+        loginRow.target = self; menu.addItem(loginRow)
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "退出 PausePal", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self; menu.addItem(quit)
@@ -82,6 +85,11 @@ final class MenuAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                          (SMAppService.mainApp.status == .requiresApproval ? .mixed : .off)
         loginRow.title = SMAppService.mainApp.status == .requiresApproval ? "登录后启动（待系统批准）" : "登录后启动"
         item.button?.toolTip = "PausePal · " + visual.label + " · " + connectionRow.title + " · " + mediaRow.title
+    }
+
+    @objc private func toggleShortcut() {
+        receiver?.media.nextShortcutMode.toggle()
+        shortcutRow.state = receiver?.media.nextShortcutMode == true ? .on : .off
     }
 
     @objc private func toggleLogin() {

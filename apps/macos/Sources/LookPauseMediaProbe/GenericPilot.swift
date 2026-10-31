@@ -344,6 +344,7 @@ final class InputWatch: @unchecked Sendable {
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
     var denied: String? { lock.withLock { reason } }
+    var healthy: Bool { denied == nil && tap.map { CGEvent.tapIsEnabled(tap: $0) } == true && CGPreflightListenEventAccess() }
     func revoke(_ value: String) { lock.withLock { if reason == nil { reason = value } } }
 
     init() throws {

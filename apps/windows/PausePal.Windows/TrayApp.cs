@@ -18,6 +18,9 @@ internal sealed class TrayApp : Forms.ApplicationContext
     private readonly Forms.ToolStripMenuItem mediaRow = new() { Enabled = false };
     private readonly Forms.ToolStripMenuItem networkRow = new() { Enabled = false };
     private readonly Forms.ToolStripMenuItem loginRow = new("登录后启动") { CheckOnClick = false };
+    private readonly Forms.ToolStripMenuItem shortcutRow = new("下次观影用快捷键兼容模式") { CheckOnClick = true,
+        ToolTipText = "先播放并点击播放器，再在手机开始。空格效果不验证，可能误切换；手动操作后需重新开始。不回退。" };
+    private int nextShortcutMode;
     private readonly Forms.ContextMenuStrip menu = new();
     private readonly Dictionary<string, Icon> icons = [];
     private readonly Task mediaWorker;
@@ -39,7 +42,8 @@ internal sealed class TrayApp : Forms.ApplicationContext
         };
         core.PairRequested += (peer, name) => Post(() => ShowPairing(peer, name));
         core.PairEnded += peer => Post(() => { if (pairingPeer == peer) pairing?.Close(); });
-        PopulateMenu(menu, connectionRow, mediaRow, networkRow, loginRow, async (_, _) => await ShutdownAsync());
+        PopulateMenu(menu, connectionRow, mediaRow, networkRow, shortcutRow, loginRow, async (_, _) => await ShutdownAsync());
+        shortcutRow.CheckedChanged += (_, _) => Volatile.Write(ref nextShortcutMode,shortcutRow.Checked ? 1 : 0);
         menu.Opening += (_, _) => { Render(core.Snapshot, true); ReadLogin(); };
         loginRow.Click += (_, _) =>
         {
@@ -70,11 +74,11 @@ internal sealed class TrayApp : Forms.ApplicationContext
         }
     }
     internal static void PopulateMenu(Forms.ContextMenuStrip menu, Forms.ToolStripMenuItem connection,
-        Forms.ToolStripMenuItem media, Forms.ToolStripMenuItem network, Forms.ToolStripMenuItem login, EventHandler exit)
+        Forms.ToolStripMenuItem media, Forms.ToolStripMenuItem network, Forms.ToolStripMenuItem shortcut, Forms.ToolStripMenuItem login, EventHandler exit)
     {
         menu.Font = new Font("Microsoft YaHei UI", 9);
         menu.AccessibleName = "PausePal 状态菜单";
-        menu.Items.AddRange([connection, media, network, new Forms.ToolStripSeparator(), login,
+        menu.Items.AddRange([connection, media, network, new Forms.ToolStripSeparator(), shortcut, login,
             new Forms.ToolStripMenuItem("退出", null, exit)]);
     }
 
@@ -109,8 +113,11 @@ internal sealed class TrayApp : Forms.ApplicationContext
     private async Task RunMediaAsync()
     {
         var session = new MediaSession(new WindowsMediaEnvironment(input));
+        var shortcut = new ShortcutSession(new ShortcutEnvironment(input));
+        var shortcutMode = false;
         long generation = 0;
-        session.Changed += text => core.MediaChanged(generation, text);
+        session.Changed += text => { if(!shortcutMode)core.MediaChanged(generation, text); };
+        shortcut.Changed += text => { if(shortcutMode)core.MediaChanged(generation, text); };
         try
         {
             while (!inbox.Closed)
@@ -120,15 +127,20 @@ internal sealed class TrayApp : Forms.ApplicationContext
                     generation = pending.Generation;
                     switch (pending.Value)
                     {
-                        case "START": session.Start(); break;
-                        case "STOP": session.Stop(); break;
-                        case "DISCONNECT": session.Stop("手机已断开，恢复资格取消"); break;
+                        case "START":
+                            session.Stop();shortcut.Stop();
+                            shortcutMode=Volatile.Read(ref nextShortcutMode)!=0;
+                            if(shortcutMode)shortcut.Start();else session.Start();
+                            break;
+                        case "STOP": session.Stop();shortcut.Stop();break;
+                        case "DISCONNECT": session.Stop("手机已断开，恢复资格取消");shortcut.Stop();break;
                         default:
-                            if (Enum.TryParse<WatchingIntent>(pending.Value, out var intent)) session.Receive(intent, pending.Epoch);
+                            if (Enum.TryParse<WatchingIntent>(pending.Value, out var intent))
+                            { if(shortcutMode)shortcut.Receive(intent,pending.Epoch);else session.Receive(intent, pending.Epoch); }
                             break;
                     }
                 }
-                if (!inbox.Closed) session.Tick();
+                if (!inbox.Closed) { if(shortcutMode)shortcut.Tick();else session.Tick(); }
                 await Task.Delay(200);
             }
         }
@@ -137,7 +149,7 @@ internal sealed class TrayApp : Forms.ApplicationContext
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { kind = "media-worker-ended", error = error.GetType().Name }));
             core.Stop(); inbox.Complete();
         }
-        finally { session.Stop(); }
+        finally { session.Stop();shortcut.Stop(); }
     }
     private void Post(Action action)
     {

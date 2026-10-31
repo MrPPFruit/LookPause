@@ -48,6 +48,7 @@ foreach (var check in ClusterChecks()) checks.Add(check.Key, check.Value);
 foreach (var check in MediaPolicyTests.Checks()) checks.Add(check.Key, check.Value);
 foreach (var check in ForegroundChecks()) checks.Add(check.Key, check.Value);
 foreach (var check in RewindFocusChecks()) checks.Add(check.Key, check.Value);
+foreach (var check in ShortcutTests.Checks()) checks.Add(check.Key, check.Value);
 foreach (var check in ProtocolTests.Checks()) checks.Add(check.Key, check.Value);
 var passed=0;
 foreach(var(name,run) in checks)

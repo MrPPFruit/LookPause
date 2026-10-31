@@ -1,5 +1,7 @@
 # PausePal
 
+2026-10-31 Windows0.1.6新增默认关闭的快捷键兼容模式，供无法识别播放控件的页面显式选用。离开／回看各一次Space，不确认实际播放状态，不回退；用户已接受可能误切换的取舍。124项自动回归与构建通过，网站及S25真实入口待验；见[使用及验收](apps/windows/验收说明.md)。当前分支`codex/windows-shortcut-mode`接续0.1.5，旧Windows与跨端基线保持。
+
 原名 LookPause；2026-10-18 用户确认仅更改显示名称。安装/配对身份、服务标识和工程路径保持，以兼容已有设备。
 
 2026-10-21 桌面媒体优化：Windows 0.1.5补齐媒体键盘承载面与异步焦点确认，108项自动回归通过，用户网站本机pilot三轮恢复／回退及随后Space／方向键通过。网页仍是播放器的一次Left，不保证五秒；隐藏控件、时间一致性、其他播放器及S25完整矩阵保持开放，见[回退报告](docs/comet/reports/2026-10-21-windows-rewind-focus.md)。[共用规则](docs/media-control-policy.md)、[合成用例](tests/media-policy/cases.json)、[Mac接续说明](docs/macos-media-optimization-handoff.md)已提供，Mac实施与实测须在Mac独立完成。

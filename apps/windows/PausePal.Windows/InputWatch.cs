@@ -44,8 +44,8 @@ internal sealed class InputWatch : IDisposable, IRevocation
             if (code >= 0)
             {
                 var item = Marshal.PtrToStructure<KeyboardEvent>(data);
-                // 只排除本进程带随机标记的一次 Left；不忽略其他注入事件。
-                if (!(item.Key == 0x25 && (item.Flags & 0x10) != 0 && item.Extra == OwnRewindTag))
+                // 仅豁免本进程随机标记的固定Left／兼容Space，不忽略其他注入事件。
+                if (!IsOwnMediaKey(item.Key,item.Flags,item.Extra))
                 { if ((item.Flags & 0x10) != 0) Interlocked.Increment(ref injectedKeyboardEvents);
                     Interlocked.Increment(ref keyboardEvents); Interlocked.Increment(ref epoch); }
             }
@@ -89,6 +89,9 @@ internal sealed class InputWatch : IDisposable, IRevocation
         GC.KeepAlive(mouse);
         GC.KeepAlive(foreground);
     }
+
+    internal static bool IsOwnMediaKey(uint key,uint flags,nuint extra)=>key is 0x25 or 0x20 &&
+        (flags&0x10)!=0 && extra==OwnRewindTag;
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern nint GetModuleHandle(string? name);
     [DllImport("user32.dll", SetLastError = true)] private static extern nint SetWindowsHookEx(int id, Hook proc, nint module, uint thread);

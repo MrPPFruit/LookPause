@@ -1,5 +1,7 @@
 # Mac 媒体识别优化接续
 
+2026-10-31新增取舍：用户已明确接受Windows独立快捷键兼容模式（未知状态可能误切换、不回退），见分支`codex/windows-shortcut-mode`的[交付报告](comet/reports/2026-10-31-windows-shortcut-mode.md)及[现行产品规则](product-spec.md)。默认正常模式不变；兼容模式只按意图发送Space，真实接管后整次解除、需新START。Mac没有接入此模式，也不能直接继承Windows测试结果；若后续实施，先在本平台核验固定键投递、输入豁免与焦点边界，保留原有改动和GAP。新模式不是普通识别路径已修好的证据。
+
 日期：2026-10-21。用户已批准 Windows 取消固定容器名称门槛，并要求 Mac 在本平台评估相同问题。这里是接续说明，Mac 源码尚未由本次 Windows 工作修改，原 Mac／Android 未收尾项仍保留。
 
 统一跟踪：[GitHub Issue #1](https://github.com/MrPPFruit/LookPause/issues/1)。Mac会话可从该Issue和本页接续；创建Issue不等于Mac已开始执行。

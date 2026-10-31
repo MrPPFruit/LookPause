@@ -1,5 +1,7 @@
 # PausePal Windows 接收端（迁移测试版）
 
+2026-10-31：最新独立包为0.1.6，位于`.local/windows-0.1.6`，分支`codex/windows-shortcut-mode`接续Windows0.1.5。新增显式下一轮快捷键兼容模式，默认关闭，124项自动回归通过；网页及S25真实入口待验。启动与取舍见[集中验收](验收说明.md)，设计与证据见[兼容模式报告](../../docs/comet/reports/2026-10-31-windows-shortcut-mode.md)。下文0.1.5为历史。
+
 已有 C# 媒体资格核心、兼容现有手机协议的 TLS 接收端、独立 DPAPI 身份、原生局域网发现、四态托盘、登录启动和恢复后一次回退。当前分支为 `codex/windows-receiver`，来自 integration@c030577。54 项自动化、本机真实 TLS/DPAPI 和原生发现注册/反注册通过；真实媒体、普通托盘与 S25 集中验收尚未通过。最新事实见[迁移报告](../../docs/comet/reports/2026-10-19-windows-migration.md)，用户步骤见[集中验收说明](验收说明.md)。
 
 当前独立包为0.1.5，双击 `.local/windows-0.1.5/PausePal.Windows.exe` 启动托盘；先退出旧版本，不要并行启动。首次运行自动生成本机身份、自启默认开启，配对需要用户点一次允许。无需导入 Mac 凭据或重装 S25 APK。本机有 .NET 10 Desktop Runtime，测试包为框架依赖分发，必须保留整个输出目录。更新保留当前用户的身份文件，不要删除来绕过认证问题。

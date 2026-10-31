@@ -1,0 +1,13 @@
+state_version: 3
+workflow: full
+phase: verify
+delivery_outcome: pending
+build_mode: direct
+isolation: branch
+verify_mode: null
+design_doc: openspec/changes/windows-shortcut-mode/design.md
+plan: null
+verify_result: pending
+verification_report: docs/comet/reports/2026-10-31-windows-shortcut-mode.md
+branch_status: pending
+archived: false

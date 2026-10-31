@@ -5,6 +5,7 @@ delivery_outcome: pending
 build_mode: direct
 isolation: branch
 verify_mode: static-review-and-build
-verify_result: pending
-branch_status: pending
+verify_result: partial
+branch_status: integrated
+verification_report: docs/comet/reports/2026-10-31-mac-shortcut-mode.md
 archived: false

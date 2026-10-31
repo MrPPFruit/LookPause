@@ -26,3 +26,8 @@ Mac观察接受AXWebArea文档或原生窗口非空AXDocument，不读取播放�
 ## Git整合
 
 短分支codex/mac-shortcut-mode从3f7bd5f上的codex/experience-integration建立；实现及代码集成点在收尾记录补充。main不接收本轮变更；公开清单不包含安装包、原始日志、截图、媒体或配对秘密。
+
+
+收尾记录：实现`ffb0404e18a033f917059a2ef44608be9c390d50`，no-ff代码集成点`8d85fd7c5495c058b7a2d7e3541d0a87d987ff36`。GitHub写前核验MrPPFruit，两分支已推送并通过`git ls-remote`读回。main仍`766a1968362bf582ce8fb3b75f8b2d959e1939cb`。后续状态文档不改变本次代码合并点。
+
+Mac本机build8已签名校验并启动，过程未执行测试或提交媒体键；公开20个文本文件的清单／敏感模式／本地Markdown链接和差异空白静态检查通过。普通进程存在只证明启动，不证明菜单、权限或播放器效果。MAC-SHORTCUT-01代码已整合，用户结果与UI体验仍待反馈，change保持pending。
